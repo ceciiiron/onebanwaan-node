@@ -1,10 +1,9 @@
 import db from "../../models/index.js";
-// import { secretKey } from "../../config/auth.js";
+import dayjs from "dayjs";
 const Admin = db.sequelize.models.Admin;
 
 // import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import e from "express";
 
 export function login(req, res) {
 	Admin.findOne({
@@ -24,6 +23,7 @@ export function login(req, res) {
 				email: admin.dataValues.email,
 				admin_id: admin.dataValues.admin_id,
 				isLoggedIn: true,
+				loginTime: dayjs().format(),
 			};
 
 			// let token = jwt.sign(data, secretKey, { expiresIn: "12h" });

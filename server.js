@@ -73,13 +73,7 @@ app.get("/api", (req, res) => {
 (await import("./app/routes/barangayHotlineRoutes.js")).default(app);
 (await import("./app/routes/barangayRoutes.js")).default(app);
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8081;
 app.listen(PORT, () => {
 	console.log(`Server running on port ${PORT}`);
 });
-
-// Im on the process of transforming my code from cjs to esm and in my server.js (entry point) I have this code
-// ```(await import("./app/routes/authRoutes.js")).default(app);
-// (await import("./app/routes/adminRoutes.js")).default(app);```
-
-// It produces no errors but await should be inside an async function right?  but this code runs..
