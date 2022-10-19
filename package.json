@@ -4,7 +4,7 @@
 	"description": "One Banwaan REST API v1",
 	"exports": "./server.js",
 	"scripts": {
-		"start": "nodemon server.js"
+		"start": "node server.js"
 	},
 	"author": "omicron",
 	"license": "ISC",
