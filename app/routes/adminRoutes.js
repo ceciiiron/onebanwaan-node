@@ -24,6 +24,7 @@ const upload = multer({
 });
 
 export default (app) => {
+	//testing
 	// [isAdmin]
 	router.post("/", [isAdmin], upload.single("image_file"), create);
 	router.get("/paginated", isAdmin, findAllPaginated);
