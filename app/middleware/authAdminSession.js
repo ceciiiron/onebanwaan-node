@@ -3,7 +3,8 @@
 // const config = require("../config/auth.js");
 
 export const isAdmin = (req, res, next) => {
-	console.log("CURRENT USER:", req.session.user);
+	console.log("CURRENT ADMIN:", req.session.user);
+
 	// let token = req.headers["x-access-token"];
 	// if (!token) {
 	// 	return res.status(401).send({ message: "Token not provided" });
@@ -24,5 +25,10 @@ export const isAdmin = (req, res, next) => {
 	// 	next();
 	// });
 
-	return res.status(401).send({ message: req.session });
+	if (req.session?.user?.admin_id) {
+		return next();
+	}
+
+	// return res.status(401).send({ message: req.session });
+	return res.status(401).send({ message: "Unauthorized" });
 };

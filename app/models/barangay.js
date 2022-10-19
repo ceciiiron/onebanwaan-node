@@ -8,8 +8,7 @@ export default (sequelize, DataTypes) => {
 		 * The `models/index` file will call this method automatically.
 		 */
 		static associate(models) {
-			// define association here
-			// models.Barangay()
+			/* --------------------- Barangay 1:M Barangay hotlines --------------------- */
 			models.Barangay.hasMany(models.BarangayHotline, {
 				foreignKey: "barangay_id",
 				as: "hotlines",
@@ -17,11 +16,22 @@ export default (sequelize, DataTypes) => {
 				onUpdate: "CASCADE",
 			});
 
+			models.BarangayHotline.belongsTo(models.Barangay, {
+				foreignKey: "barangay_id",
+				as: "barangay",
+			});
+
+			/* ----------------------- Barangay 1:M Barangay roles ---------------------- */
 			models.Barangay.hasMany(models.BarangayRole, {
 				foreignKey: "barangay_id",
 				as: "barangay_roles",
 				onDelete: "CASCADE",
 				onUpdate: "CASCADE",
+			});
+
+			models.BarangayRole.belongsTo(models.Barangay, {
+				foreignKey: "barangay_id",
+				as: "barangay",
 			});
 		}
 	}
@@ -38,6 +48,7 @@ export default (sequelize, DataTypes) => {
 			number: { type: DataTypes.INTEGER, allowNull: false },
 			bio: { type: DataTypes.STRING },
 			address: { type: DataTypes.STRING, allowNull: false },
+			directory: { type: DataTypes.STRING, allowNull: false },
 		},
 		{
 			sequelize,

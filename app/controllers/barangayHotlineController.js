@@ -26,16 +26,18 @@ const getPagination = (page, size) => {
 	return { limit, offset };
 };
 
-const formatPaginatedData = (data, page, limit) => {
-	const { count: totalItems, rows: rows } = data;
+const formatPaginatedData = (fetchedData, page, limit) => {
+	const { count: totalItems, rows: data } = fetchedData;
 	const currentPage = page ? +page : 0;
 	const totalPages = Math.ceil(totalItems / limit);
-	return { totalItems, rows, totalPages, currentPage, rowPerPage: limit };
+	return { totalItems, data, totalPages, currentPage, rowPerPage: limit };
 };
 
 export const findAll = (req, res) => {
-	const { page, size, name, number } = req.query;
+	const { page, size, search, barangay_id } = req.query;
 	const { limit, offset } = getPagination(page, size);
+
+	let hotlineCondition = {};
 
 	//return rows: barangay_id: 12, hotlines: [ ...hotlines ]
 	// return Barangay.findAndCountAll({
@@ -53,11 +55,24 @@ export const findAll = (req, res) => {
 	// 		res.status(500).send({ message: err.message || "An error occured while retrieving data" });
 	// 	});
 
+	if (barangay_id && barangay_id != "ALL") {
+		const searchBarangayCondition = {
+			barangay_id: barangay_id,
+		};
+		Object.assign(hotlineCondition, searchBarangayCondition);
+	}
+
+	if (search) {
+		const searchCondition = {
+			[Op.or]: [{ name: { [Op.like]: `${search}%` } }, { number: { [Op.like]: `${search}%` } }],
+		};
+		Object.assign(hotlineCondition, searchCondition);
+	}
+
 	return BarangayHotline.findAndCountAll({
-		where: null,
+		where: hotlineCondition,
 		limit,
 		offset,
-		include: { model: Barangay, attributes: [], required: true, as: "barangay" },
 		attributes: [
 			"barangay_hotline_id",
 			"barangay_id",
@@ -65,8 +80,10 @@ export const findAll = (req, res) => {
 			"number",
 			"created_at",
 			"updated_at",
-			[db.Sequelize.literal("`Barangay`.`name`"), "barangay_name"],
+			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col(`barangayhotline.updated_at`), "%m-%d-%Y %H:%i:%s"), "updated_at"],
+			// [db.Sequelize.literal("`Barangay`.`name`"), "barangay_name"],
 		],
+		include: { model: Barangay, attributes: ["name", "logo", "number"], required: true, as: "barangay" },
 		order: [["created_at", "DESC"]],
 	})
 		.then((data) => {
@@ -82,7 +99,6 @@ export const findAllByBarangay = (req, res) => {
 	const { page, size, name, number } = req.query;
 	const { limit, offset } = getPagination(page, size);
 	const barangay_id = req.params.barangay_id;
-	console.log("FINDING HOTLINES BY BARANGAY...");
 
 	return BarangayHotline.findAndCountAll({ where: { barangay_id }, limit, offset, order: [["created_at", "DESC"]] })
 		.then((data) => {
@@ -90,7 +106,7 @@ export const findAllByBarangay = (req, res) => {
 			res.send(response);
 		})
 		.catch((err) => {
-			res.status(500).send({ message: err.message || "An error occured while retrieving data" });
+			res.status(500).send({ message: err.message });
 		});
 };
 

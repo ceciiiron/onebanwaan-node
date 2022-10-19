@@ -1,24 +1,20 @@
 import db from "../models/index.js";
 
 const BarangayRole = db.sequelize.models.BarangayRole;
+const BarangayPermission = db.sequelize.models.BarangayPermission;
 const Op = db.Sequelize.Op;
 
 export const create = async (req, res) => {
 	try {
-		// await uploadFileMiddleware.uploadFile(req, res);
-
-		// if (!req.file) return res.status(400).send({ message: `Could not upload data: Logo is required` });
-
-		const barangay = {
+		const barangayRole = {
 			name: req.body.name,
-			number: req.body.number,
-			bio: req.body.bio,
-			address: req.body.address,
+			barangay_id: req.body.barangay_id,
 		};
 
-		const newBarangay = await Barangay.create(barangay);
+		//Also add the permissions
+		const newBarangayRole = await Barangay.create(barangay);
 
-		res.send(newBarangay);
+		res.send(newBarangayRole);
 	} catch (error) {
 		//delete file
 		res.status(500).send({ message: `Could not upload data: ${error}` });
@@ -31,33 +27,65 @@ const getPagination = (page, size) => {
 	return { limit, offset };
 };
 
-const formatPaginatedData = (data, page, limit) => {
-	const { count: totalItems, rows: barangays } = data;
+const formatPaginatedData = (fetchedData, page, limit) => {
+	const { count: totalItems, rows: data } = fetchedData;
 	const currentPage = page ? +page : 0;
 	const totalPages = Math.ceil(totalItems / limit);
-	return { totalItems, barangays, totalPages, currentPage, rowPerPage: limit };
+	return { totalItems, data, totalPages, currentPage, rowPerPage: limit };
 };
 
-export const findAll = (req, res) => {
-	const { page, size, name, number } = req.query;
+export const findAllByBarangayPaginated = (req, res) => {
+	const { page = 0, size = 10, search, sortBy = "updated_at", sortOrder = "DESC" } = req.query;
+	const barangay_id = req.params.barangay_id;
 	const { limit, offset } = getPagination(page, size);
-	let condition = {};
 
-	if (name) {
-		condition.name = { [Op.like]: `%${name}%` };
-	}
-
-	if (number) {
-		condition.number = { [Op.like]: `%${number}%` };
-	}
-
-	return Barangay.findAndCountAll({ where: condition, limit, offset, order: [["created_at", "DESC"]] })
+	BarangayRole.findAndCountAll({
+		where: { barangay_id },
+		limit,
+		offset,
+		attributes: [
+			"name",
+			"barangay_role_id",
+			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
+			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("updated_at"), "%m-%d-%Y %H:%i:%s"), "updated_at"],
+		],
+		order: [[sortBy, sortOrder]],
+	})
 		.then((data) => {
 			const response = formatPaginatedData(data, page, limit);
 			res.send(response);
 		})
 		.catch((err) => {
-			res.status(500).send({ message: err.message || "An error occured while retrieving data" });
+			res.status(500).send({ message: err.message });
+		});
+};
+
+export const findAllByBarangay = (req, res) => {
+	const { with_permissions = 0 } = req.query;
+	const barangay_id = req.params.barangay_id;
+
+	const includePermissions = {
+		model: BarangayPermission,
+		as: "barangay_role_permissions",
+	};
+
+	BarangayRole.findAndCountAll({
+		attributes: [
+			"name",
+			"barangay_role_id",
+			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("created_at"), "%d-%m-%Y %H:%i:%s"), "created_at"],
+			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("updated_at"), "%d-%m-%Y %H:%i:%s"), "updated_at"],
+		],
+		include: with_permissions ? includePermissions : null,
+		where: { barangay_id },
+		order: [["created_at", "DESC"]],
+	})
+		.then((fetchedData) => {
+			const { count, rows: data } = fetchedData;
+			res.send({ count, data });
+		})
+		.catch((err) => {
+			res.status(500).send({ message: err.message });
 		});
 };
 

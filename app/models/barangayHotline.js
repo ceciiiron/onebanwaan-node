@@ -9,10 +9,6 @@ export default (sequelize, DataTypes) => {
 		 */
 		static associate(models) {
 			// define association here
-			models.BarangayHotline.belongsTo(models.Barangay, {
-				foreignKey: "barangay_id",
-				as: "barangay",
-			});
 		}
 	}
 

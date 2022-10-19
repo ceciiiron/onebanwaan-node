@@ -12,6 +12,7 @@ const sequelize = new Sequelize(DATABASE, USER, PASSWORD, {
 	host: HOST,
 	dialect: _dialect,
 	pool: { ..._pool },
+	timezone: "+08:00",
 });
 
 const modelFiles = readdirSync(__dirname).filter((file) => {
@@ -36,7 +37,7 @@ asyncImportsArray.forEach((module) => {
 // });
 
 const db = {};
-
+//associate models (foreign keys)
 Object.keys(sequelize.models).forEach((modelName) => {
 	if (sequelize.models[modelName].associate) {
 		sequelize.models[modelName].associate(sequelize.models);

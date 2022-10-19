@@ -1,36 +1,127 @@
 import db from "../models/index.js";
+import dayjs from "dayjs";
+import capitalize from "capitalize";
+import bcrypt from "bcryptjs";
 
 const Barangay = db.sequelize.models.Barangay;
+const BarangayRole = db.sequelize.models.BarangayRole;
+const BarangayHotline = db.sequelize.models.BarangayHotline;
+const ResidentAccount = db.sequelize.models.ResidentAccount;
 const Op = db.Sequelize.Op;
 
-import uploadFileMiddleware from "../middleware/uploadFile.js";
-import fs from "fs";
+import axios from "axios";
+import FormData from "form-data";
+import { nanoid } from "nanoid";
 
+/* ========================================================================== */
+/*                               CREATE BARANGAY                              */
+/* ========================================================================== */
 export const create = async (req, res) => {
 	try {
-		// await uploadFileMiddleware.uploadFile(req, res);
-
-		// if (!req.file) return res.status(400).send({ message: `Could not upload data: Logo is required` });
-
 		const barangay = {
-			name: req.body.name,
+			name: capitalize.words(req.body.name),
 			number: req.body.number,
-			bio: req.body.bio,
-			address: req.body.address,
+			bio: req.body.bio?.trim(),
+			address: capitalize.words(req.body.address?.trim() ?? "", true) || null,
+			directory: nanoid(16),
 		};
 
-		if (req.file) {
-			barangay.logo = "/resources/static/assets/uploads/" + req.file.renamedFile;
+		const residentAccount = {
+			professional_title: capitalize.words(req.body.professional_title?.trim() ?? "", true) || null,
+			first_name: capitalize.words(req.body.first_name),
+			middle_initial: capitalize.words(req.body.middle_initial?.trim() ?? "", true) || null,
+			last_name: capitalize.words(req.body.last_name),
+			suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
+			email: req.body.email?.trim(),
+			password: bcrypt.hashSync(req.body.password.trim(), 8),
+			profile_image_link: null,
+			cover_image_link: null,
+		};
+
+		//Image is required
+		if (!req.file) {
+			return res.status(400).send({ error: { msg: "missing_barangay_logo", param: "image_file" } });
 		}
+		//check for existing barangay number
+		if (await Barangay.findOne({ where: { number: barangay.number } })) {
+			return res.status(400).send({
+				error: {
+					msg: "existing_barangay_number",
+					param: "number",
+				},
+			});
+		}
+		//check for existing resident account
+		if (await ResidentAccount.findOne({ where: { email: residentAccount.email } })) {
+			return res.status(400).send({
+				error: {
+					msg: "existing_resident_account",
+					param: "email",
+				},
+			});
+		}
+
+		let form = new FormData();
+		form.append("image_file", req.file.buffer, {
+			filename: req.file.originalname.replace(/ /g, ""),
+			contentType: req.file.mimetype,
+			knownLength: req.file.size,
+		});
+		form.append("image_type", "barangay_logo");
+		form.append("directory", "barangay_logo");
+
+		const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/singleimage`, form, {
+			headers: { ...form.getHeaders() },
+		});
+
+		barangay.logo = message.image_url;
+
+		/* ========================================================================== */
 
 		const newBarangay = await Barangay.create(barangay);
 
-		res.send(newBarangay);
+		//after insertion of new barangay, create 2 roles: Superadmin and Resident role
+		const newBarangayRoles = await BarangayRole.bulkCreate([
+			{ name: "SUPERADMIN", barangay_id: newBarangay.barangay_id },
+			{ name: "RESIDENT", barangay_id: newBarangay.barangay_id },
+		]);
+
+		const newSuperadminBarangayRole = newBarangayRoles[0];
+
+		//insert barangay permissions to barangay superadmin role
+		const [results, metadata] = await db.sequelize.query(
+			'INSERT INTO BarangayRolePermissions(barangay_role_id, barangay_permission_id) SELECT $1 as "barangay_role_id", barangay_permission_id FROM BarangayPermissions',
+			{
+				bind: [newSuperadminBarangayRole.barangay_role_id], //set superadmin role
+			}
+		);
+
+		const newResident = await ResidentAccount.create({
+			...residentAccount,
+			barangay_role_id: newSuperadminBarangayRole.barangay_role_id,
+		});
+
+		delete newResident.dataValues.password;
+
+		/* ========================================================================== */
+
+		res.status(201).send({
+			message: {
+				barangay: { ...newBarangay.dataValues },
+				resident_account: { ...newResident.dataValues, barangay_role: newSuperadminBarangayRole.name },
+			},
+		});
 	} catch (error) {
-		//delete file
-		res.status(500).send({ message: `Could not upload data: ${error}` });
+		//TODO: Delete image if it fails
+		// await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/barangaylogo/new`, { data: {req.file} });
+
+		res.status(500).send({ message: `Could not upload data: ${error}`, stack: error.stack });
 	}
 };
+
+/* ========================================================================== */
+/*                                FIND BARANGAY                               */
+/* ========================================================================== */
 
 const getPagination = (page, size) => {
 	const limit = size ? +size : 3;
@@ -45,24 +136,17 @@ const formatPaginatedData = (fetchedData, page, limit) => {
 	return { totalItems, data, totalPages, currentPage, rowPerPage: limit };
 };
 
-export const findAll = (req, res) => {
-	const { page, size, search } = req.query;
+export const findAllPaginated = (req, res) => {
+	const { page = 0, size = 10, search, sortBy = "updated_at", sortOrder = "DESC" } = req.query;
 	const { limit, offset } = getPagination(page, size);
 	let condition = {};
-
-	// if (name) {
-	// 	condition.name = { [Op.like]: `%${name}%` };
-	// }
-
-	// if (number) {
-	// 	condition.number = { [Op.like]: `%${number}%` };
-	// }
+	// console.log(req.session.user);
 
 	if (search) {
 		condition.name = { [Op.like]: `%${search}%` };
 	}
 
-	return Barangay.findAndCountAll({
+	Barangay.findAndCountAll({
 		where: condition,
 		limit,
 		offset,
@@ -71,10 +155,10 @@ export const findAll = (req, res) => {
 			"name",
 			"logo",
 			"number",
-			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("created_at"), "%d-%m-%Y %H:%i:%s"), "created_at"],
-			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("updated_at"), "%d-%m-%Y %H:%i:%s"), "updated_at"],
+			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
+			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("updated_at"), "%m-%d-%Y %H:%i:%s"), "updated_at"],
 		],
-		order: [["created_at", "DESC"]],
+		order: [[sortBy, sortOrder]],
 	})
 		.then((data) => {
 			const response = formatPaginatedData(data, page, limit);
@@ -85,34 +169,107 @@ export const findAll = (req, res) => {
 		});
 };
 
+export const findAll = (req, res) => {
+	const { with_images = 0 } = req.query;
+
+	const attributes = ["barangay_id", "name", "number"];
+
+	if (with_images == 1) {
+		attributes.push("logo");
+	}
+
+	Barangay.findAll({
+		attributes,
+	})
+		.then((data) => {
+			res.send(data);
+		})
+		.catch((err) => {
+			res.status(500).send({ message: err.message || "An error occured while retrieving data" });
+		});
+};
+
 export const findOne = async (req, res) => {
-	console.log("Pumasok sa find one");
 	const id = req.params.id;
 
+	//check if no admin_id
+
 	try {
-		const barangay = await Barangay.findByPk(id);
+		const barangay = await Barangay.findByPk(id, {
+			attributes: [
+				"barangay_id",
+				"name",
+				"logo",
+				"number",
+				"bio",
+				"address",
+				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("barangay.created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
+				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("barangay.updated_at"), "%m-%d-%Y %H:%i:%s"), "updated_at"],
+				[
+					db.sequelize.literal(`(SELECT COUNT(*) FROM barangayhotlines as hotlines WHERE hotlines.barangay_id = barangay.barangay_id)`),
+					"numberOfHotlines",
+				],
+				[
+					db.sequelize.literal(
+						`(SELECT COUNT(*) FROM barangayroles BR 
+							INNER JOIN residentaccounts RA on RA.barangay_role_id = BR.barangay_role_id
+							WHERE BR.barangay_id = barangay.barangay_id
+							)`
+					),
+					"numberOfResidents",
+				],
+			],
+			include: [
+				// {
+				// 	model: BarangayHotline,
+				// 	as: "hotlines",
+				// 	attributes: [],
+				// 	required: true,
+				// },
+				// {
+				// 	model: BarangayRole,
+				// 	as: "barangay_roles",
+				// 	attributes: [],
+				// 	// attributes: [[db.sequelize.fn("COUNT", db.sequelize.col(`resident_accounts.barangay_role_id`)), "numberOfResidents"]],
+				// 	required: false,
+				// 	include: [{ model: ResidentAccount, as: "resident_accounts", attributes: [], required: true }],
+				// },
+			],
+		});
 
 		return barangay ? res.send(barangay) : res.status(404).send({ message: `Not Found` });
 	} catch (error) {
-		res.status(500).send({ message: `An error occured while retrieving data: ${error}` });
+		res.status(500).send({ message: `An error occured while retrieving data: ${error} ${error.stack}` });
 	}
 };
 
 export const update = async (req, res) => {
 	const id = req.params.id;
 
-	const barangayLogo = await Barangay.findByPk(id, { attributes: ["logo"] });
+	const barangay = await Barangay.findByPk(id, { attributes: ["logo"] });
 
 	const data = { ...req.body };
 
+	let testing;
+
 	if (req.file) {
-		data.logo = __base_dir + "/resources/static/assets/uploads/" + req.file.renamedFile;
-		fs.unlink(barangayLogo.logo, (error) => {});
+		let form = new FormData();
+		form.append("image_file", req.file.buffer, {
+			filename: req.file.originalname.replace(/ /g, ""),
+			contentType: req.file.mimetype,
+			knownLength: req.file.size,
+		});
+		const { data: msg } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/barangaylogo/new`, form, {
+			headers: { ...form.getHeaders() },
+		});
+		testing = await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/barangaylogo/delete`, { params: { image_file: barangay.logo } });
+
+		data.logo = msg.image_url;
 	}
 
 	await Barangay.update(data, { where: { barangay_id: id } });
 
-	res.send({ message: "Data updated successfully!" });
+	res.send({ message: "Data updated successfully!", data: testing?.data });
 };
 
 export const destroy = async (req, res) => {
@@ -120,15 +277,25 @@ export const destroy = async (req, res) => {
 
 	const barangay = await Barangay.findByPk(id);
 
-	fs.unlink(barangay.logo, (error) => {
-		Barangay.destroy({
-			where: { barangay_id: id },
+	//TODO: Check if barangay has existing residents, do not delete if it has existing residents that is not superadmin.
+
+	Barangay.destroy({
+		where: { barangay_id: id },
+	})
+		.then((data) => {
+			res.send({ message: "Data deleted successfully!" });
 		})
-			.then((data) => {
-				res.send({ message: "Data deleted successfully!" });
-			})
-			.catch((err) => {
-				res.status(400).send({ message: err });
-			});
-	});
+		.catch((err) => {
+			res.status(400).send({ message: err });
+		});
 };
+/* ========================================================================== */
+/*                                    UTILS                                   */
+/* ========================================================================== */
+// const findResidentByEmail = async (email) => {
+// 	return await ResidentAccount.findOne({ where: { email } });
+// };
+
+// const findBarangayByNumber = async (number) => {
+// 	return await Barangay.findOne({ where: { number } });
+// };

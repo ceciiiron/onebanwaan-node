@@ -4,7 +4,6 @@ const Op = db.Sequelize.Op;
 
 const bcrypt = require("bcryptjs");
 
-//create admin
 exports.create = async (req, res) => {
 	//validate request
 

@@ -8,11 +8,17 @@ export default (sequelize, DataTypes) => {
 		 * The `models/index` file will call this method automatically.
 		 */
 		static associate(models) {
-			// define association here
-			// models.Barangay()
-			models.BarangayRole.belongsTo(models.Barangay, {
-				foreignKey: "barangay_id",
-				as: "barangay",
+			// Barangay Role 1:M Resident Account
+			models.BarangayRole.hasMany(models.ResidentAccount, {
+				foreignKey: "barangay_role_id",
+				as: "resident_accounts",
+				onDelete: "CASCADE",
+				onUpdate: "CASCADE",
+			});
+
+			models.ResidentAccount.belongsTo(models.BarangayRole, {
+				foreignKey: "barangay_role_id",
+				as: "role",
 			});
 		}
 	}

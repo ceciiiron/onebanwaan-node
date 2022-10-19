@@ -1,5 +1,7 @@
-import { login, logout, checkSession } from "../controllers/auth/adminAuthController.js";
+import { login, logout, getSession, getAccountFromSession } from "../controllers/auth/adminAuthController.js";
 import { check, validationResult } from "express-validator";
+
+import { isAdmin } from "../middleware/authAdminSession.js";
 
 export default (app) => {
 	app.post(
@@ -18,5 +20,6 @@ export default (app) => {
 		login
 	);
 	app.post("/api/auth/admin/logout", logout);
-	app.get("/api/auth/admin/checksession", checkSession);
+	app.get("/api/auth/admin/getsession", isAdmin, getSession);
+	app.get("/api/auth/admin/getaccount", isAdmin, getAccountFromSession);
 };

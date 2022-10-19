@@ -29,12 +29,15 @@ db.sequelize
 /*                          ROUTES AND CORS SETTINGS                          */
 /* ========================================================================== */
 const corsOptions = {
-	origin: ["http://localhost:3000", "http://localhost:8081"],
+	// origin: false,
+	// origin: "*",
+	methods: ["GET", "POST", "PUT", "DELETE"],
+	origin: ["http://localhost:3000", "http://localhost:8080", "https://4e32-103-225-139-242.ngrok.io", "*"],
 	credentials: true,
 };
 
 app.use(cors(corsOptions));
-app.use(json());
+app.use(express.json());
 app.use(urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(function (req, res, next) {
@@ -70,10 +73,13 @@ app.get("/api", (req, res) => {
 
 (await import("./app/routes/authRoutes.js")).default(app);
 (await import("./app/routes/adminRoutes.js")).default(app);
+(await import("./app/routes/barangayRoleRoutes.js")).default(app);
 (await import("./app/routes/barangayHotlineRoutes.js")).default(app);
 (await import("./app/routes/barangayRoutes.js")).default(app);
 
-const PORT = process.env.PORT || 8081;
+(await import("./app/routes/residentRoutes.js")).default(app);
+
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
 	console.log(`Server running on port ${PORT}`);
 });
