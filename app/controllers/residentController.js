@@ -26,14 +26,14 @@ export const create = async (req, res) => {
 			bio: req.body.bio?.trim() ?? null,
 		};
 
-		const residentDetails = {
-			sex: req.body.sex,
-			birthdate: req.body.birthdate,
-			age: req.body.age,
-			home_address: req.body.home_address,
-			contact_number: req.body.contact_number,
-			occupation: req.body.occupation,
-		};
+		// const residentDetails = {
+		// 	sex: req.body.sex,
+		// 	birthdate: req.body.birthdate,
+		// 	age: req.body.age,
+		// 	home_address: req.body.home_address,
+		// 	contact_number: req.body.contact_number,
+		// 	occupation: req.body.occupation,
+		// };
 
 		//upload image first to get url
 		if (req.file) {
@@ -51,7 +51,7 @@ export const create = async (req, res) => {
 		}
 
 		const newResident = await ResidentAccount.create(residentAccount);
-		residentDetails.resident_account_id = newResident.dataValues.resident_id;
+		// residentDetails.resident_account_id = newResident.dataValues.resident_id;
 
 		//unset hashed password
 		delete newResident.dataValues.password;
@@ -151,7 +151,7 @@ export const findAll = (req, res) => {
 						model: Barangay,
 						required: true,
 						as: "barangay",
-						attributes: ["barangay_id", "name", "logo", "number"],
+						attributes: ["barangay_id", "name", "logo", "number", "directory"],
 						where: barangayCondition,
 					},
 				],

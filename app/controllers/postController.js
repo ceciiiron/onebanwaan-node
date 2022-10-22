@@ -4,9 +4,7 @@ import capitalize from "capitalize";
 import bcrypt from "bcryptjs";
 
 const Barangay = db.sequelize.models.Barangay;
-const BarangayRole = db.sequelize.models.BarangayRole;
-const BarangayHotline = db.sequelize.models.BarangayHotline;
-const ResidentAccount = db.sequelize.models.ResidentAccount;
+const Post = db.sequelize.models.Post;
 const Op = db.Sequelize.Op;
 
 import axios from "axios";
@@ -14,121 +12,46 @@ import FormData from "form-data";
 import { nanoid } from "nanoid";
 
 /* ========================================================================== */
-/*                               CREATE BARANGAY                              */
+/*                               CREATE POST                                  */
 /* ========================================================================== */
 export const create = async (req, res) => {
 	try {
-		const barangay = {
-			name: capitalize.words(req.body.name),
-			number: req.body.number,
-			bio: req.body.bio?.trim(),
-			address: capitalize.words(req.body.address?.trim() ?? "", true) || null,
-			directory: nanoid(16),
+		const post = {
+			resident_account_id: req.session.user.resident_account_id,
+			post_type_id: req.body.post_type_id || null,
+			barangay_id: req.body_post_type_id || null,
+			title: capitalize.words(req.body.title?.trim() ?? "", true) || null,
+			content: req.body.content?.trim() || null,
+			privacy: req.body.privacy || null,
+			as_barangay_admin: req.body.as_barangay_admin || null,
 		};
 
-		const residentAccount = {
-			professional_title: capitalize.words(req.body.professional_title?.trim() ?? "", true) || null,
-			first_name: capitalize.words(req.body.first_name),
-			middle_initial: capitalize.words(req.body.middle_initial?.trim() ?? "", true) || null,
-			last_name: capitalize.words(req.body.last_name),
-			suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
-			email: req.body.email?.trim(),
-			password: bcrypt.hashSync(req.body.password.trim(), 8),
-			directory: nanoid(16),
-			profile_image_link: null,
-			cover_image_link: null,
-		};
+		// if (req.file) {
+		// 	let form = new FormData();
+		// 	form.append("image_file", req.file.buffer, {
+		// 		filename: req.file.originalname.replace(/ /g, ""),
+		// 		contentType: req.file.mimetype,
+		// 		knownLength: req.file.size,
+		// 	});
 
-		//Image is required
-		//VALIDATION ==================================
-		if (!req.file) {
-			return res.status(400).send({ error: { msg: "missing_barangay_logo", param: "image_file" } });
-		}
-		//check for existing barangay number
-		if (await Barangay.findOne({ where: { number: barangay.number } })) {
-			return res.status(400).send({
-				error: {
-					msg: "existing_barangay_number",
-					param: "number",
-				},
-			});
-		}
-		//check for existing resident account
-		if (await ResidentAccount.findOne({ where: { email: residentAccount.email } })) {
-			return res.status(400).send({
-				error: {
-					msg: "existing_resident_account",
-					param: "email",
-				},
-			});
-		}
+		// 	form.append("image_type", "barangay_logo");
+		// 	form.append("directory", barangay.directory);
 
-		let form = new FormData();
-		form.append("image_file", req.file.buffer, {
-			filename: req.file.originalname.replace(/ /g, ""),
-			contentType: req.file.mimetype,
-			knownLength: req.file.size,
-		});
+		// 	const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/singleimage`, form, {
+		// 		headers: { ...form.getHeaders() },
+		// 	});
 
-		form.append("image_type", "barangay_logo");
-		form.append("directory", barangay.directory);
-
-		const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/singleimage`, form, {
-			headers: { ...form.getHeaders() },
-		});
-
-		barangay.logo = message.image_name;
-
+		// 	post.logo = message.image_name;
+		// }
 		/* ========================================================================== */
 
-		const newBarangay = await Barangay.create(barangay);
+		const newPost = await Post.create(post);
 
-		//after insertion of new barangay, create 2 roles: Superadmin and Resident role
-		const newBarangayRoles = await BarangayRole.bulkCreate([
-			{ name: "SUPERADMIN", barangay_id: newBarangay.barangay_id },
-			{ name: "RESIDENT", barangay_id: newBarangay.barangay_id },
-		]);
-
-		const newSuperadminBarangayRole = newBarangayRoles[0];
-		const newResidentBarangayRole = newBarangayRoles[1];
-
-		//insert barangay permissions to barangay superadmin role
-		const [results, metadata] = await db.sequelize.query(
-			'INSERT INTO BarangayRolePermissions(barangay_role_id, barangay_permission_id) SELECT $1 as "barangay_role_id", barangay_permission_id FROM BarangayPermissions',
-			{
-				bind: [newSuperadminBarangayRole.barangay_role_id], //set superadmin role
-			}
-		);
-
-		//insert selected barangay permissions for new barangay resident role
-		const [rs, md] = await db.sequelize.query(
-			`INSERT INTO BarangayRolePermissions(barangay_role_id, barangay_permission_id) 
-			SELECT $1 as "barangay_role_id", barangay_permission_id FROM BarangayPermissions WHERE name IN ("create_post", "update_post", "delete_post", "heart_post", "comment_post", "update_resident_profile", "request_document_issuance", "request_complaint", "request_other_services", "create_suggestion", "cancel_request")`,
-			{
-				bind: [newResidentBarangayRole.barangay_role_id], //set resident role
-			}
-		);
-
-		const newResident = await ResidentAccount.create({
-			...residentAccount,
-			barangay_role_id: newSuperadminBarangayRole.barangay_role_id,
-		});
-
-		delete newResident.dataValues.password;
-
-		/* ========================================================================== */
-
-		res.status(201).send({
-			message: {
-				barangay: { ...newBarangay.dataValues },
-				resident_account: { ...newResident.dataValues, barangay_role: newSuperadminBarangayRole.name },
-			},
-		});
+		res.status(201).send(newPost);
 	} catch (error) {
 		//TODO: Delete image if it fails
-		// await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/barangaylogo/new`, { data: {req.file} });
 
-		res.status(500).send({ message: `Could not upload data: ${error}`, stack: error.stack });
+		res.status(500).send({ message: `Could not upload post: ${error}`, stack: error.stack });
 	}
 };
 
@@ -153,22 +76,21 @@ export const findAllPaginated = (req, res) => {
 	const { page = 0, size = 10, search, sortBy = "updated_at", sortOrder = "DESC" } = req.query;
 	const { limit, offset } = getPagination(page, size);
 	let condition = {};
-	// console.log(req.session.user);
 
 	if (search) {
 		condition.name = { [Op.like]: `%${search}%` };
 	}
 
-	Barangay.findAndCountAll({
+	Post.findAndCountAll({
 		where: condition,
 		limit,
 		offset,
 		attributes: [
-			"barangay_id",
-			"name",
-			"logo",
-			"number",
-			"directory",
+			"post_id",
+			"resident_account_id",
+			"title",
+			"content",
+			"as_barangay_admin",
 			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
 			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("updated_at"), "%m-%d-%Y %H:%i:%s"), "updated_at"],
 		],

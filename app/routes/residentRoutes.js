@@ -1,4 +1,5 @@
 import { create, findAll, findOne, update, destroy } from "../controllers/residentController.js";
+// import { create as createP } from "../controllers/postController.js";
 import express from "express";
 const router = express.Router();
 
@@ -9,6 +10,7 @@ const upload = multer({
 });
 
 export default (app) => {
+	// router.post("/post", upload.single("profile_image_link"), createP);
 	router.post("/", upload.single("profile_image_link"), create);
 
 	router.get("/", findAll);

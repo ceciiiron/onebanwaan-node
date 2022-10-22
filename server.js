@@ -73,6 +73,7 @@ app.get("/api", (req, res) => {
 
 (await import("./app/routes/authRoutes.js")).default(app);
 (await import("./app/routes/adminRoutes.js")).default(app);
+(await import("./app/routes/postRoutes.js")).default(app);
 (await import("./app/routes/barangayRoleRoutes.js")).default(app);
 (await import("./app/routes/barangayHotlineRoutes.js")).default(app);
 (await import("./app/routes/barangayRoutes.js")).default(app);

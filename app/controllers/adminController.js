@@ -80,7 +80,11 @@ export const findAllPaginated = (req, res) => {
 	};
 
 	if (search) {
-		condition.name = { [Op.like]: `%${search}%` };
+		let orSearch = {
+			[Op.or]: [{ first_name: { [Op.like]: `${search}%` } }, { last_name: { [Op.like]: `${search}%` } }, { email: { [Op.like]: `${search}%` } }],
+		};
+
+		Object.assign(condition, orSearch);
 	}
 
 	Admin.findAndCountAll({

@@ -28,6 +28,7 @@ export default (sequelize, DataTypes) => {
 			status: { type: DataTypes.BOOLEAN, defaultValue: true }, //1 = activated
 			profile_image_link: { type: DataTypes.STRING, allowNull: true },
 			cover_image_link: { type: DataTypes.STRING, allowNull: true },
+			directory: { type: DataTypes.STRING, allowNull: false },
 			bio: { type: DataTypes.STRING, allowNull: true },
 		},
 		{

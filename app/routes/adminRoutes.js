@@ -35,7 +35,7 @@ export default (app) => {
 	router.put("/:admin_id/changepassword", [isAdmin], changePassword);
 	router.get("/:id", isAdmin, findOne);
 	router.put("/:id", isAdmin, upload.single("image_file"), update);
-	router.delete("/:id", [isAdmin], destroy);
+	router.delete("/:id", isAdmin, destroy);
 
 	app.use("/api/admins", router);
 };
