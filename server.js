@@ -4,7 +4,6 @@ const app = express();
 import "dotenv/config";
 import path from "path";
 import { fileURLToPath } from "url";
-("Com11ment");
 
 import methodOverride from "method-override";
 
