@@ -32,7 +32,13 @@ const corsOptions = {
 	// origin: false,
 	// origin: "*",
 	methods: ["GET", "POST", "PUT", "DELETE"],
-	origin: ["http://localhost:3000", "http://localhost:8080", "https://4e32-103-225-139-242.ngrok.io", "*"],
+	origin: [
+		"http://localhost:3000",
+		"http://localhost:8080",
+		"https://4e32-103-225-139-242.ngrok.io",
+		"https://e55b-103-200-33-22.ngrok.io",
+		"https://046a-103-200-33-22.ngrok.io",
+	],
 	credentials: true,
 };
 
