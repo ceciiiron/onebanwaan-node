@@ -45,20 +45,24 @@ app.use(function (req, res, next) {
 	next();
 });
 app.use(methodOverride("X-HTTP-Method-Override"));
-app.set("trust proxy", 1);
-app.use(
-	session({
-		key: "SESSIONID",
-		secret: "secret-key",
-		resave: false,
-		saveUninitialized: false,
-		cookie: {
-			maxAge: 86400 * 1000, //12 hours
-			secure: process.env.DEPLOYMENT === "production" ? true : false,
-			sameSite: "none",
-		},
-	})
-);
+
+const sessionSettings = {
+	key: "SESSIONID",
+	secret: "secret-key",
+	resave: false,
+	saveUninitialized: false,
+	cookie: {
+		maxAge: 86400 * 1000, //12 hours
+	},
+};
+
+if (process.env.DEPLOYMENT === "production") {
+	app.set("trust proxy", 1); // trust first proxy
+	sessionSettings.cookie.secure = true; // serve secure cookies
+	sessionSettings.cookie.sameSite = "none";
+}
+
+app.use(session(sessionSettings));
 
 /* ========================================================================== */
 /*                               REGISTER ROUTES                              */
