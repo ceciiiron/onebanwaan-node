@@ -31,8 +31,6 @@ db.sequelize
 const corsOptions = {
 	methods: ["GET", "POST", "PUT", "DELETE"],
 	origin: process.env.CORS_ORIGIN.split(","),
-	secure: process.env.DEPLOYMENT === "production" ? true : false,
-	sameSite: "none",
 	credentials: true,
 };
 console.log("CORS OPTIONS 🧙🧙");
@@ -56,6 +54,8 @@ app.use(
 		saveUninitialized: false,
 		cookie: {
 			maxAge: 86400 * 1000, //12 hours
+			secure: process.env.DEPLOYMENT === "production" ? true : false,
+			sameSite: "none",
 		},
 	})
 );
