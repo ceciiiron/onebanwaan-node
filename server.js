@@ -29,18 +29,14 @@ db.sequelize
 /*                          ROUTES AND CORS SETTINGS                          */
 /* ========================================================================== */
 const corsOptions = {
-	// origin: false,
-	// origin: "*",
 	methods: ["GET", "POST", "PUT", "DELETE"],
-	origin: [
-		"http://localhost:3000",
-		"http://localhost:8080",
-		"https://4e32-103-225-139-242.ngrok.io",
-		"https://e55b-103-200-33-22.ngrok.io",
-		"https://046a-103-200-33-22.ngrok.io",
-	],
+	origin: process.env.CORS_ORIGIN.split(","),
+	secure: process.env.DEPLOYMENT === "production" ? true : false,
+	sameSite: "none",
 	credentials: true,
 };
+console.log("CORS OPTIONS 🧙🧙");
+console.log(corsOptions);
 
 app.use(cors(corsOptions));
 app.use(express.json());
