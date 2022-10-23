@@ -45,7 +45,7 @@ app.use(function (req, res, next) {
 	next();
 });
 app.use(methodOverride("X-HTTP-Method-Override"));
-
+app.set("trust proxy", 1);
 app.use(
 	session({
 		key: "SESSIONID",
