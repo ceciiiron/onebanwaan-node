@@ -3,31 +3,40 @@ import dayjs from "dayjs";
 const ResidentAccount = db.sequelize.models.ResidentAccount;
 const BarangayRole = db.sequelize.models.BarangayRole;
 const BarangayPermission = db.sequelize.models.BarangayPermission;
+const Barangay = db.sequelize.models.Barangay;
 
 import bcrypt from "bcryptjs";
 
 export function login(req, res) {
+	// Comment
 	ResidentAccount.findOne({
 		where: { email: req.body.email },
 		include: {
 			model: BarangayRole,
-			attributes: ["barangay_role_id", "name"],
+			attributes: ["barangay_role_id", "name", "barangay_id"],
 			required: true,
 			as: "role",
-			include: {
-				model: BarangayPermission,
-				through: { attributes: [] },
-				as: "barangay_role_permissions",
-			},
+			include: [
+				{
+					model: BarangayPermission,
+					through: { attributes: [] },
+					as: "barangay_role_permissions",
+				},
+				{
+					model: Barangay,
+					as: "barangay",
+				},
+			],
 		},
 	})
 		.then((residentAccount) => {
-			residentAccount = residentAccount.toJSON();
 			if (!residentAccount || !bcrypt.compareSync(req.body.password, residentAccount.password)) {
 				//check email
 				console.log("PASSWORD");
 				return res.status(400).send({ errors: [{ msg: "Incorrect username or password", param: "app" }] });
 			}
+			residentAccount = residentAccount.toJSON();
+			console.log(residentAccount);
 			delete residentAccount.password;
 
 			req.session.user = residentAccount;
