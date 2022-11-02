@@ -221,17 +221,17 @@ export const findOne = async (req, res) => {
 				"bio",
 				"address",
 				"directory",
-				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("barangay.created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
-				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("barangay.updated_at"), "%m-%d-%Y %H:%i:%s"), "updated_at"],
+				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("Barangays.created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
+				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("Barangays.updated_at"), "%m-%d-%Y %H:%i:%s"), "updated_at"],
 				[
-					db.sequelize.literal(`(SELECT COUNT(*) FROM barangayhotlines as hotlines WHERE hotlines.barangay_id = barangay.barangay_id)`),
+					db.sequelize.literal(`(SELECT COUNT(*) FROM BarangayHotlines as hotlines WHERE hotlines.barangay_id = Barangays.barangay_id)`),
 					"numberOfHotlines",
 				],
 				[
 					db.sequelize.literal(
-						`(SELECT COUNT(*) FROM barangayroles BR 
-							INNER JOIN residentaccounts RA on RA.barangay_role_id = BR.barangay_role_id
-							WHERE BR.barangay_id = barangay.barangay_id
+						`(SELECT COUNT(*) FROM BarangayRoles BR 
+							INNER JOIN ResidentAccounts RA on RA.barangay_role_id = BR.barangay_role_id
+							WHERE BR.barangay_id = Barangay.barangay_id
 							)`
 					),
 					"numberOfResidents",
@@ -244,20 +244,6 @@ export const findOne = async (req, res) => {
 					// attributes: [],
 					// required: true,
 				},
-				// {
-				// 	model: BarangayHotline,
-				// 	as: "hotlines",
-				// 	attributes: [],
-				// 	required: true,
-				// },
-				// {
-				// 	model: BarangayRole,
-				// 	as: "barangay_roles",
-				// 	attributes: [],
-				// 	// attributes: [[db.sequelize.fn("COUNT", db.sequelize.col(`resident_accounts.barangay_role_id`)), "numberOfResidents"]],
-				// 	required: false,
-				// 	include: [{ model: ResidentAccount, as: "resident_accounts", attributes: [], required: true }],
-				// },
 			],
 			order: [[{ model: BarangayOfficial, as: "officials" }, "hierarchy", "ASC"]],
 		});

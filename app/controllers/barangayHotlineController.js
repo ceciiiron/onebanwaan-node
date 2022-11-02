@@ -80,7 +80,7 @@ export const findAll = (req, res) => {
 			"number",
 			"created_at",
 			"updated_at",
-			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col(`barangayhotline.updated_at`), "%m-%d-%Y %H:%i:%s"), "updated_at"],
+			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col(`BarangayHotlines.updated_at`), "%m-%d-%Y %H:%i:%s"), "updated_at"],
 			// [db.Sequelize.literal("`Barangay`.`name`"), "barangay_name"],
 		],
 		include: { model: Barangay, attributes: ["name", "logo", "number"], required: true, as: "barangay" },
