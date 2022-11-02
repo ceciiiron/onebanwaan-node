@@ -1,13 +1,16 @@
 import db from "../models/index.js";
-import dayjs from "dayjs";
+// import dayjs from "dayjs";
 import capitalize from "capitalize";
 import bcrypt from "bcryptjs";
 
 const Barangay = db.sequelize.models.Barangay;
 const BarangayRole = db.sequelize.models.BarangayRole;
 const ResidentAccount = db.sequelize.models.ResidentAccount;
-const ResidentDetail = db.sequelize.models.ResidentDetail;
+// const ResidentDetail = db.sequelize.models.ResidentDetail;
 const Op = db.Sequelize.Op;
+
+import axios from "axios";
+import FormData from "form-data";
 
 import fs from "fs";
 
@@ -26,41 +29,13 @@ export const create = async (req, res) => {
 			bio: req.body.bio?.trim() ?? null,
 		};
 
-		// const residentDetails = {
-		// 	sex: req.body.sex,
-		// 	birthdate: req.body.birthdate,
-		// 	age: req.body.age,
-		// 	home_address: req.body.home_address,
-		// 	contact_number: req.body.contact_number,
-		// 	occupation: req.body.occupation,
-		// };
-
-		//upload image first to get url
-		if (req.file) {
-			let form = new FormData();
-			form.append("profile_image_link", req.file.buffer, {
-				filename: req.file.originalname.replace(/ /g, ""),
-				contentType: req.file.mimetype,
-				knownLength: req.file.size,
-			});
-			const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/resident/profile/new`, form, {
-				headers: { ...form.getHeaders() },
-			});
-
-			residentAccount.profile_image_link = message.image_url;
-		}
-
 		const newResident = await ResidentAccount.create(residentAccount);
 		// residentDetails.resident_account_id = newResident.dataValues.resident_id;
 
 		//unset hashed password
 		delete newResident.dataValues.password;
 
-		res.status(201).send({
-			message: {
-				resident_account: { ...newResident.dataValues },
-			},
-		});
+		res.status(201).send(newResident);
 	} catch (error) {
 		res.status(500).send({ message: `Could not upload data: ${error}`, stack: error.stack });
 	}
@@ -122,6 +97,7 @@ export const findAll = (req, res) => {
 			"resident_account_id",
 			"profile_image_link",
 			"status",
+			"directory",
 			[
 				db.sequelize.fn(
 					"CONCAT_WS",
@@ -170,32 +146,138 @@ export const findAll = (req, res) => {
 
 export const findOne = async (req, res) => {
 	console.log("Pumasok sa find one");
-	const id = req.params.id;
+	const { resident_account_id } = req.params;
 
 	try {
-		const barangay = await Barangay.findByPk(id);
+		const residentAccount = await ResidentAccount.findByPk(resident_account_id, {
+			include: {
+				model: BarangayRole,
+				attributes: ["barangay_role_id", "name"],
+				required: true,
+				as: "role",
+				include: [
+					{
+						model: Barangay,
+						as: "barangay",
+					},
+				],
+			},
+		});
 
-		return barangay ? res.send(barangay) : res.status(404).send({ message: `Not Found` });
+		return residentAccount ? res.send(residentAccount) : res.status(404).send({ message: `Not Found` });
 	} catch (error) {
-		res.status(500).send({ message: `An error occured while retrieving data: ${error}` });
+		res.status(400).send({ message: `An error occured while retrieving data: ${error}` });
 	}
 };
 
 export const update = async (req, res) => {
-	const id = req.params.id;
+	const { resident_account_id } = req.params;
 
-	const barangayLogo = await Barangay.findByPk(id, { attributes: ["logo"] });
+	const updateResidentAccount = {
+		professional_title: capitalize.words(req.body.professional_title?.trim() ?? "", true) || null,
+		first_name: capitalize.words(req.body.first_name),
+		middle_initial: capitalize.words(req.body.middle_initial?.trim() ?? "", true) || null,
+		last_name: capitalize.words(req.body.last_name),
+		suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
+		email: req.body.email?.trim(),
+		// passsword: bcrypt.hashSync(req.body.password.trim(), 8),
+		// privacy: req.body.privacy,
+		// barangay_role_id: req.body.barangay_role_id,
+		bio: req.body.bio?.trim() ?? null,
+	};
 
-	const data = { ...req.body };
+	const residentAccount = await ResidentAccount.findByPk(resident_account_id, {
+		include: {
+			model: BarangayRole,
+			attributes: ["barangay_role_id", "name"],
+			required: true,
+			as: "role",
+			include: [
+				{
+					model: Barangay,
+					as: "barangay",
+				},
+			],
+		},
+	});
 
-	if (req.file) {
-		data.logo = __base_dir + "/resources/static/assets/uploads/" + req.file.renamedFile;
-		fs.unlink(barangayLogo.logo, (error) => {});
+	if (req.files["image_file"]?.[0]) {
+		let form = new FormData();
+		form.append("image_file", req.files["image_file"][0].buffer, {
+			filename: req.files["image_file"][0].originalname.replace(/ /g, ""),
+			contentType: req.files["image_file"][0].mimetype,
+			knownLength: req.files["image_file"][0].size,
+		});
+
+		form.append("image_type", "resident_profile");
+		form.append("directory", residentAccount.role.barangay.directory);
+		form.append("sub_directory", residentAccount.directory);
+
+		const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/singleimage`, form, {
+			headers: { ...form.getHeaders() },
+		});
+
+		//check if coverfile is present on database.
+		//delete the old image.
+		if (residentAccount.profile_image_link) {
+			const imageUrlsArray = [residentAccount.profile_image_link];
+			let params = "?";
+			for (let imageUrlIndex in imageUrlsArray) {
+				params += `image_files[]=${imageUrlsArray[imageUrlIndex]}`;
+			}
+			params += "&image_type=resident_profile";
+			params += "&directory=" + residentAccount.role.barangay.directory;
+			params += "&sub_directory=" + residentAccount.directory;
+
+			const { data: deleteImageMessage } = await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/delete` + params, {
+				headers: { ...form.getHeaders() },
+			});
+		}
+
+		updateResidentAccount.profile_image_link = message.image_name;
 	}
 
-	await Barangay.update(data, { where: { barangay_id: id } });
+	if (req.files["image_cover_file"]?.[0]) {
+		let form = new FormData();
+		form.append("image_cover_file", req.files["image_cover_file"][0].buffer, {
+			filename: req.files["image_cover_file"][0].originalname.replace(/ /g, ""),
+			contentType: req.files["image_cover_file"][0].mimetype,
+			knownLength: req.files["image_cover_file"][0].size,
+		});
 
-	res.send({ message: "Data updated successfully!" });
+		form.append("image_type", "resident_cover");
+		form.append("directory", residentAccount.role.barangay.directory);
+		form.append("sub_directory", residentAccount.directory);
+
+		try {
+			const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/singleimage`, form, {
+				headers: { ...form.getHeaders() },
+			});
+
+			if (residentAccount.cover_image_link) {
+				const imageUrlsArray = [residentAccount.cover_image_link];
+				let params = "?";
+				for (let imageUrlIndex in imageUrlsArray) {
+					params += `image_files[]=${imageUrlsArray[imageUrlIndex]}`;
+				}
+				params += "&image_type=resident_cover";
+				params += "&directory=" + residentAccount.role.barangay.directory;
+				params += "&sub_directory=" + residentAccount.directory;
+
+				const { data: deleteImageMessage } = await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/delete` + params, {
+					headers: { ...form.getHeaders() },
+				});
+			}
+
+			updateResidentAccount.cover_image_link = message.image_name;
+		} catch (error) {
+			console.log("IMAGEERROR", error, error.stack);
+		}
+	}
+
+	const affectedRow = await ResidentAccount.update(updateResidentAccount, { where: { resident_account_id } });
+
+	res.send({ message: "Data updated successfully!", affectedRow });
 };
 
 export const destroy = async (req, res) => {
@@ -216,4 +298,45 @@ export const destroy = async (req, res) => {
 				res.status(400).send({ message: err });
 			});
 	});
+};
+
+/* ========================================================================== */
+/*                               CHANGE PASSWORD                              */
+/* ========================================================================== */
+
+export const changePassword = async (req, res) => {
+	const resident_account_id = req.params.resident_account_id;
+
+	try {
+		const adminAccount = {
+			password: bcrypt.hashSync(req.body.password?.trim(), 8),
+		};
+
+		const affectedRow = await Admin.update(adminAccount, {
+			where: { resident_account_id },
+		});
+
+		res.send({ message: "Password changed successfully!", affectedRow: affectedRow });
+	} catch (error) {
+		res.status(500).send({ message: "Error changing password", error: error, stack: error.stack });
+	}
+};
+
+// PROFILE
+
+export const currentChangePassword = async (req, res) => {
+	//TODO: Add backend validation
+	try {
+		const residentPassword = {
+			password: bcrypt.hashSync(req.body.password?.trim(), 8),
+		};
+
+		const affectedRow = await ResidentAccount.update(residentPassword, {
+			where: { resident_account_id: req.session.user.resident_account_id },
+		});
+
+		res.send({ message: "Password changed successfully!", affectedRow: affectedRow });
+	} catch (error) {
+		res.status(500).send({ message: "Error changing password", error: error, stack: error.stack });
+	}
 };

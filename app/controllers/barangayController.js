@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 const Barangay = db.sequelize.models.Barangay;
 const BarangayRole = db.sequelize.models.BarangayRole;
 const BarangayHotline = db.sequelize.models.BarangayHotline;
+const BarangayOfficial = db.sequelize.models.BarangayOfficial;
 const ResidentAccount = db.sequelize.models.ResidentAccount;
 const Op = db.Sequelize.Op;
 
@@ -186,7 +187,7 @@ export const findAllPaginated = (req, res) => {
 export const findAll = (req, res) => {
 	const { with_images = 0 } = req.query;
 
-	const attributes = ["barangay_id", "name", "number"];
+	const attributes = ["barangay_id", "name", "number", "directory"];
 
 	if (with_images == 1) {
 		attributes.push("logo");
@@ -195,6 +196,7 @@ export const findAll = (req, res) => {
 
 	Barangay.findAll({
 		attributes,
+		order: [["number", "ASC"]],
 	})
 		.then((data) => {
 			res.send(data);
@@ -236,6 +238,12 @@ export const findOne = async (req, res) => {
 				],
 			],
 			include: [
+				{
+					model: BarangayOfficial,
+					as: "officials",
+					// attributes: [],
+					// required: true,
+				},
 				// {
 				// 	model: BarangayHotline,
 				// 	as: "hotlines",
@@ -251,6 +259,7 @@ export const findOne = async (req, res) => {
 				// 	include: [{ model: ResidentAccount, as: "resident_accounts", attributes: [], required: true }],
 				// },
 			],
+			order: [[{ model: BarangayOfficial, as: "officials" }, "hierarchy", "ASC"]],
 		});
 
 		return barangay ? res.send(barangay) : res.status(404).send({ message: `Not Found` });

@@ -45,7 +45,7 @@ export default (sequelize, DataTypes) => {
 			},
 			post_id: { type: DataTypes.INTEGER, allowNull: false },
 			resident_account_id: { type: DataTypes.INTEGER, allowNull: false },
-			image_link: { type: DataTypes.STRING(500) },
+			// image_link: { type: DataTypes.STRING(500) },
 			as_barangay_admin: { type: DataTypes.BOOLEAN, defaultValue: false },
 		},
 		{

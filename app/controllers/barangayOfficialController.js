@@ -1,20 +1,35 @@
 import db from "../models/index.js";
+import capitalize from "capitalize";
 
 const Barangay = db.sequelize.models.Barangay;
 const BarangayHotline = db.sequelize.models.BarangayHotline;
+const BarangayOfficial = db.sequelize.models.BarangayOfficial;
+const ResidentAccount = db.sequelize.models.ResidentAccount;
 const Op = db.Sequelize.Op;
 
 export const create = async (req, res) => {
 	const barangay_id = req.params.barangay_id;
 
 	try {
-		const data = await BarangayHotline.create({
-			barangay_id,
-			name: req.body.name,
-			number: req.body.number,
-		});
+		const barangayOfficial = {
+			barangay_id: req.body.barangay_id,
+			display_name: capitalize.words(req.body.display_name?.trim() ?? "", true) || null,
+			position: capitalize.words(req.body.position?.trim() ?? "", true) || null,
+			hierarchy: req.body.hierarchy,
+			availability: req.body.availability,
+			contact_number: req.body.contact_number,
+			email: req.body.email,
+		};
 
-		res.send(data);
+		if (req.body.resident_account_email) {
+			//connect to OB Account
+			// Find email
+			//2 error: email not found and email is already conected
+		}
+
+		const data = await BarangayOfficial.create(barangayOfficial);
+
+		res.status(201).send(data);
 	} catch (error) {
 		res.status(500).send({ message: `Could not insert data: ${error}` });
 	}
@@ -34,7 +49,7 @@ const formatPaginatedData = (fetchedData, page, limit) => {
 };
 
 export const findAll = (req, res) => {
-	const { page = 0, size = 20, search, barangay_id } = req.query;
+	const { page, size, search, barangay_id } = req.query;
 	const { limit, offset } = getPagination(page, size);
 
 	let hotlineCondition = {};
@@ -84,7 +99,7 @@ export const findAll = (req, res) => {
 			// [db.Sequelize.literal("`Barangay`.`name`"), "barangay_name"],
 		],
 		include: { model: Barangay, attributes: ["name", "logo", "number"], required: true, as: "barangay" },
-		order: [["name", "ASC"]],
+		order: [["created_at", "DESC"]],
 	})
 		.then((data) => {
 			const response = formatPaginatedData(data, page, limit);
@@ -96,11 +111,11 @@ export const findAll = (req, res) => {
 };
 
 export const findAllByBarangay = (req, res) => {
-	const { page, size, name, number } = req.query;
+	const { page, size = 10 } = req.query;
 	const { limit, offset } = getPagination(page, size);
 	const barangay_id = req.params.barangay_id;
 
-	return BarangayHotline.findAndCountAll({ where: { barangay_id }, limit, offset, order: [["created_at", "DESC"]] })
+	return BarangayOfficial.findAndCountAll({ where: { barangay_id }, limit, offset, order: [["created_at", "DESC"]] })
 		.then((data) => {
 			const response = formatPaginatedData(data, page, limit);
 			res.send(response);

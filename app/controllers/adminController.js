@@ -309,6 +309,7 @@ export async function currentUpdate(req, res) {
 				for (let imageUrlIndex in imageUrlsArray) {
 					params += `image_files[]=${imageUrlsArray[imageUrlIndex]}`;
 				}
+				form.append("image_type", "admin_profile");
 
 				const { data: deleteImageMessage } = await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/delete` + params, {
 					headers: { ...form.getHeaders() },

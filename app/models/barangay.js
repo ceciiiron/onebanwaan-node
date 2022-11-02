@@ -33,6 +33,19 @@ export default (sequelize, DataTypes) => {
 				foreignKey: "barangay_id",
 				as: "barangay",
 			});
+
+			/* --------------------- Barangay 1:M Barangay Officials --------------------- */
+			models.Barangay.hasMany(models.BarangayOfficial, {
+				foreignKey: "barangay_id",
+				as: "officials",
+				onDelete: "CASCADE",
+				onUpdate: "CASCADE",
+			});
+
+			models.BarangayOfficial.belongsTo(models.Barangay, {
+				foreignKey: "barangay_id",
+				as: "barangay",
+			});
 		}
 	}
 

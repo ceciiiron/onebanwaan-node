@@ -1,7 +1,7 @@
 export const isResident = (req, res, next) => {
 	console.log("CURRENT RESIDENT:", req.session.user);
 
-	if (req.session?.user?.resident_account_id) {
+	if (req.session?.user?.resident_account_id || req.session?.user?.admin_id) {
 		return next();
 	}
 

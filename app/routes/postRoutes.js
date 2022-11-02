@@ -1,4 +1,4 @@
-import { create, findAllPaginated } from "../controllers/postController.js";
+import { create, findAllPaginated, findOne, heart, destoryHeart } from "../controllers/postController.js";
 import { isResident } from "../middleware/authResidentSession.js";
 import express from "express";
 import db from "../models/index.js";
@@ -14,15 +14,21 @@ const upload = multer({
 });
 
 export default (app) => {
-	router.post("/", isResident, upload.single("profile_image_link"), create);
-	router.get("/paginated", findAllPaginated);
-
-	//GET POST TYPES FOR DROP DOWN
 	router.get("/types", async (req, res) => {
+		//types for dropdown
 		const postTypes = await PostType.findAll();
 
 		res.status(200).send(postTypes);
 	});
+	// isResident
+	router.post("/", upload.array("image_files", 4), create);
+	router.get("/paginated", findAllPaginated);
 
+	/* ============================== HEART ROUTES ============================== */
+	router.post("/:post_id/heart", isResident, heart);
+	router.delete("/:post_id/heart", isResident, destoryHeart);
+	/* ========================================================================== */
+
+	router.get("/:post_id", findOne);
 	app.use("/api/posts", router);
 };

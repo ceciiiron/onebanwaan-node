@@ -8,7 +8,6 @@ const Barangay = db.sequelize.models.Barangay;
 import bcrypt from "bcryptjs";
 
 export function login(req, res) {
-	// Comment
 	ResidentAccount.findOne({
 		where: { email: req.body.email },
 		include: {
@@ -71,11 +70,17 @@ export async function getAccountFromSession(req, res) {
 			attributes: ["barangay_role_id", "name"],
 			required: true,
 			as: "role",
-			include: {
-				model: BarangayPermission,
-				through: { attributes: [] },
-				as: "barangay_role_permissions",
-			},
+			include: [
+				{
+					model: BarangayPermission,
+					through: { attributes: [] },
+					as: "barangay_role_permissions",
+				},
+				{
+					model: Barangay,
+					as: "barangay",
+				},
+			],
 		},
 	});
 	resident = resident?.toJSON();
