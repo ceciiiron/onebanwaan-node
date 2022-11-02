@@ -221,8 +221,8 @@ export const findOne = async (req, res) => {
 				"bio",
 				"address",
 				"directory",
-				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("Barangays.created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
-				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("Barangays.updated_at"), "%m-%d-%Y %H:%i:%s"), "updated_at"],
+				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
+				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("updated_at"), "%m-%d-%Y %H:%i:%s"), "updated_at"],
 				[
 					db.sequelize.literal(`(SELECT COUNT(*) FROM BarangayHotlines as hotlines WHERE hotlines.barangay_id = Barangays.barangay_id)`),
 					"numberOfHotlines",
