@@ -79,20 +79,20 @@ export const create = async (req, res) => {
 				const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/multipleimages`, form, {
 					headers: { ...form.getHeaders() },
 				});
+
+				//TODO: UPDATE TO INSERT BATCH
+				message.image_urls.forEach(async (obj) => {
+					await PostImage.create({
+						post_id: newPost.post_id,
+						image_link: obj.image_url,
+					});
+				});
+
+				console.log(message.image_urls);
 			} catch (error) {
 				console.log(error);
 				res.status(500).send({ message: `Could not upload post: ${error}`, stack: error.stack, error });
 			}
-
-			//TODO: UPDATE TO INSERT BATCH
-			message.image_urls.forEach(async (obj) => {
-				await PostImage.create({
-					post_id: newPost.post_id,
-					image_link: obj.image_url,
-				});
-			});
-
-			console.log(message.image_urls);
 		}
 		/* ========================================================================== */
 
