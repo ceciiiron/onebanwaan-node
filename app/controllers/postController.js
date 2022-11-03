@@ -75,9 +75,14 @@ export const create = async (req, res) => {
 			form.append("directory", residentAccount.role.barangay.directory);
 			form.append("sub_directory", residentAccount.directory);
 
-			const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/multipleimages`, form, {
-				headers: { ...form.getHeaders() },
-			});
+			try {
+				const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/multipleimages`, form, {
+					headers: { ...form.getHeaders() },
+				});
+			} catch (error) {
+				console.log(error);
+				res.status(500).send({ message: `Could not upload post: ${error}`, stack: error.stack, error });
+			}
 
 			//TODO: UPDATE TO INSERT BATCH
 			message.image_urls.forEach(async (obj) => {

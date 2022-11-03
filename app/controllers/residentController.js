@@ -13,6 +13,7 @@ import axios from "axios";
 import FormData from "form-data";
 
 import fs from "fs";
+import { nanoid } from "nanoid";
 
 export const create = async (req, res) => {
 	try {
@@ -23,16 +24,25 @@ export const create = async (req, res) => {
 			last_name: capitalize.words(req.body.last_name),
 			suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
 			email: req.body.email?.trim(),
-			passsword: bcrypt.hashSync(req.body.password.trim(), 8),
-			privacy: req.body.privacy,
+			password: bcrypt.hashSync(req.body.password.trim(), 8),
 			barangay_role_id: req.body.barangay_role_id,
-			bio: req.body.bio?.trim() ?? null,
+			directory: nanoid(16),
+			// privacy: req.body.privacy,
+			// bio: req.body.bio?.trim() ?? null,
 		};
 
-		const newResident = await ResidentAccount.create(residentAccount);
-		// residentDetails.resident_account_id = newResident.dataValues.resident_id;
+		console.log("AAAAA", residentAccount);
 
-		//unset hashed password
+		if (await ResidentAccount.findOne({ where: { email: residentAccount.email } })) {
+			return res.status(400).send({
+				error: {
+					msg: "existing_resident_account",
+					param: "email",
+				},
+			});
+		}
+
+		const newResident = await ResidentAccount.create(residentAccount);
 		delete newResident.dataValues.password;
 
 		res.status(201).send(newResident);
@@ -145,7 +155,6 @@ export const findAll = (req, res) => {
 };
 
 export const findOne = async (req, res) => {
-	console.log("Pumasok sa find one");
 	const { resident_account_id } = req.params;
 
 	try {
@@ -185,6 +194,16 @@ export const update = async (req, res) => {
 		// barangay_role_id: req.body.barangay_role_id,
 		bio: req.body.bio?.trim() ?? null,
 	};
+
+	//Check if email exists;
+	if (await ResidentAccount.findOne({ where: { email: updateResidentAccount.email, [Op.not]: { resident_account_id: resident_account_id } } })) {
+		return res.status(400).send({
+			error: {
+				msg: "existing_resident_account",
+				param: "email",
+			},
+		});
+	}
 
 	const residentAccount = await ResidentAccount.findByPk(resident_account_id, {
 		include: {
@@ -300,6 +319,25 @@ export const destroy = async (req, res) => {
 	});
 };
 
+export const updateAccountStatus = async (req, res) => {
+	const resident_account_id = req.params.resident_account_id;
+
+	try {
+		const residentAccountStatus = {
+			status: req.body.status,
+			barangay_role_id: req.body.barangay_role_id,
+		};
+
+		const affectedRow = await ResidentAccount.update(residentAccountStatus, {
+			where: { resident_account_id },
+		});
+
+		res.send({ message: "Account status updated successfully!", affectedRow: affectedRow });
+	} catch (error) {
+		res.status(500).send({ message: "Error changing password", error: error, stack: error.stack });
+	}
+};
+
 /* ========================================================================== */
 /*                               CHANGE PASSWORD                              */
 /* ========================================================================== */
@@ -308,11 +346,11 @@ export const changePassword = async (req, res) => {
 	const resident_account_id = req.params.resident_account_id;
 
 	try {
-		const adminAccount = {
+		const residentPassword = {
 			password: bcrypt.hashSync(req.body.password?.trim(), 8),
 		};
 
-		const affectedRow = await Admin.update(adminAccount, {
+		const affectedRow = await ResidentAccount.update(residentPassword, {
 			where: { resident_account_id },
 		});
 
@@ -322,8 +360,7 @@ export const changePassword = async (req, res) => {
 	}
 };
 
-// PROFILE
-
+// LOGGED IN
 export const currentChangePassword = async (req, res) => {
 	//TODO: Add backend validation
 	try {
