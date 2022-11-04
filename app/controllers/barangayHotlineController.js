@@ -33,6 +33,30 @@ const formatPaginatedData = (fetchedData, page, limit) => {
 	return { totalItems, data, totalPages, currentPage, rowPerPage: limit };
 };
 
+export const findEverything = (req, res) => {
+	return BarangayHotline.findAll({
+		attributes: [
+			"barangay_hotline_id",
+			"barangay_id",
+			"name",
+			"number",
+			// "created_at",
+			// "updated_at",
+			// [db.sequelize.fn("DATE_FORMAT", db.sequelize.col(`BarangayHotlines.updated_at`), "%m-%d-%Y %H:%i:%s"), "updated_at"],
+			// [db.Sequelize.literal("`Barangay`.`name`"), "barangay_name"],
+		],
+		include: { model: Barangay, attributes: ["name", "logo", "number"], required: true, as: "barangay" },
+		order: [["name", "ASC"]],
+	})
+		.then((data) => {
+			// const response = formatPaginatedData(data, page, limit);
+			res.send(data);
+		})
+		.catch((err) => {
+			res.status(500).send({ message: err.message || "An error occured while retrieving data" });
+		});
+};
+
 export const findAll = (req, res) => {
 	const { page = 0, size = 20, search, barangay_id } = req.query;
 	const { limit, offset } = getPagination(page, size);

@@ -148,9 +148,9 @@ export const update = async (req, res) => {
 };
 
 export const destroy = async (req, res) => {
-	const barangay_hotline_id = req.params.barangay_hotline_id;
+	const barangay_official_id = req.params.barangay_official_id;
 
-	const affectedRow = await BarangayHotline.destroy({ where: { barangay_hotline_id } });
+	const affectedRow = await BarangayOfficial.destroy({ where: { barangay_official_id } });
 	if (!affectedRow) res.status(404).send({ message: `Not Found` });
-	res.send({ message: "Data deleted successfully" });
+	res.status(200).message({ message: "Data deleted successfully" });
 };
