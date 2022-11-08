@@ -16,9 +16,9 @@ export const create = async (req, res) => {
 			display_name: capitalize.words(req.body.display_name?.trim() ?? "", true) || null,
 			position: capitalize.words(req.body.position?.trim() ?? "", true) || null,
 			hierarchy: req.body.hierarchy,
-			availability: req.body.availability,
-			contact_number: req.body.contact_number,
-			email: req.body.email,
+			// availability: req.body.availability,
+			contact_number: req.body.contact_number ? req.body.contact_number.trim() : null,
+			email: req.body.email ? req.body.email.trim() : null,
 		};
 
 		if (req.body.resident_account_email) {
@@ -115,10 +115,10 @@ export const findAllByBarangay = (req, res) => {
 	const { limit, offset } = getPagination(page, size);
 	const barangay_id = req.params.barangay_id;
 
-	return BarangayOfficial.findAndCountAll({ where: { barangay_id }, limit, offset, order: [["created_at", "DESC"]] })
+	return BarangayOfficial.findAndCountAll({ where: { barangay_id }, order: [["hierarchy", "ASC"]] })
 		.then((data) => {
-			const response = formatPaginatedData(data, page, limit);
-			res.send(response);
+			// const response = formatPaginatedData(data, page, limit);
+			res.send(data);
 		})
 		.catch((err) => {
 			res.status(500).send({ message: err.message });
@@ -126,23 +126,29 @@ export const findAllByBarangay = (req, res) => {
 };
 
 export const findOne = async (req, res) => {
-	const barangay_hotline_id = req.params.barangay_hotline_id;
+	const barangay_official_id = req.params.barangay_official_id;
 
-	const data = await BarangayHotline.findByPk(barangay_hotline_id);
+	const data = await BarangayOfficial.findByPk(barangay_official_id);
 
 	return data ? res.send(data) : res.status(404).send({ message: `Not Found` });
 };
 
 export const update = async (req, res) => {
-	const barangay_hotline_id = req.params.barangay_hotline_id;
+	//TODO: check session if he/she is a barangay admin.
+	const barangay_official_id = req.params.barangay_official_id;
 	const barangay_id = req.params.barangay_id;
 
-	const data = { ...req.body };
-	console.log(data);
-	//TODO: check session if he/she is a barangay admin.
+	const data = {
+		barangay_id: req.body.barangay_id,
+		display_name: capitalize.words(req.body.display_name?.trim() ?? "", true) || null,
+		position: capitalize.words(req.body.position?.trim() ?? "", true) || null,
+		hierarchy: req.body.hierarchy,
+		availability: req.body.availability,
+		contact_number: req.body.contact_number ? req.body.contact_number.trim() : null,
+		email: req.body.email ? req.body.email.trim() : null,
+	};
 
-	const affectedRow = await BarangayHotline.update(data, { where: { barangay_hotline_id } });
-	console.log(affectedRow);
+	const affectedRow = await BarangayOfficial.update(data, { where: { barangay_official_id } });
 	if (!affectedRow) res.status(404).send({ message: `Not Found` });
 	res.send({ message: "Data updated successfully!" });
 };
@@ -152,5 +158,5 @@ export const destroy = async (req, res) => {
 
 	const affectedRow = await BarangayOfficial.destroy({ where: { barangay_official_id } });
 	if (!affectedRow) res.status(404).send({ message: `Not Found` });
-	res.status(200).message({ message: "Data deleted successfully" });
+	res.status(200).send({ message: "Data deleted successfully" });
 };

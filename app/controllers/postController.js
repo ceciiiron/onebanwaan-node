@@ -9,6 +9,7 @@ const BarangayRole = db.sequelize.models.BarangayRole;
 const Post = db.sequelize.models.Post;
 const PostImage = db.sequelize.models.PostImage;
 const PostHeart = db.sequelize.models.PostHeart;
+const PostComment = db.sequelize.models.PostComment;
 const Op = db.Sequelize.Op;
 
 import axios from "axios";
@@ -28,7 +29,7 @@ export const create = async (req, res) => {
 			title: capitalize.words(req.body.title?.trim() ?? "", true) || null,
 			content: req.body.content?.trim() || null,
 			privacy: req.body.privacy || null,
-			as_barangay_admin: req.body.as_barangay_admin || null,
+			as_barangay_admin: req.body.as_barangay_admin || false,
 		};
 
 		console.log("POST DATA (❁´◡`❁)", req.body);
@@ -134,6 +135,9 @@ export const findAllPaginated = async (req, res) => {
 		likedPosts = false,
 		current = false,
 		specific = false,
+		postsByBarangay = false,
+		barangay_id = "",
+		announcementsOnly = false,
 	} = req.query;
 	const { limit, offset } = getPagination(page, size);
 
@@ -166,27 +170,27 @@ export const findAllPaginated = async (req, res) => {
 		fields.push("(IsFavorite.post_heart_id IS NOT NULL) as is_favorite");
 
 		if (likedPosts) {
-			isFavoriteQuery += ` INNER JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_resident_account_id AND as_barangay_admin = $as_barangay_admin) LikedPosts ON LikedPosts.post_id = Posts.post_id
+			isFavoriteQuery += ` INNER JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_resident_account_id)  LikedPosts ON LikedPosts.post_id = Posts.post_id
 			`;
 			Object.assign(bind, {
 				liked_by_resident_account_id: resident_account_id,
-				as_barangay_admin: as_barangay_admin,
+				// as_barangay_admin: as_barangay_admin,
 			});
 			orderByQuery = "ORDER BY LikedPosts.created_at DESC";
 		}
 
-		isFavoriteQuery += ` LEFT JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_current_resident_account_id AND as_barangay_admin = $as_barangay_admin) as IsFavorite ON IsFavorite.post_id = Posts.post_id`;
+		isFavoriteQuery += ` LEFT JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_current_resident_account_id) as IsFavorite ON IsFavorite.post_id = Posts.post_id`;
 
 		Object.assign(bind, {
 			liked_by_current_resident_account_id: req.session.user?.resident_account_id,
-			as_barangay_admin: as_barangay_admin,
+			// as_barangay_admin: as_barangay_admin,
 		});
 	} else {
 		if (likedPosts) {
-			isFavoriteQuery = ` INNER JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_resident_account_id AND as_barangay_admin = $as_barangay_admin ) as LikedPosts ON LikedPosts.post_id = Posts.post_id`;
+			isFavoriteQuery = ` INNER JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_resident_account_id  ) as LikedPosts ON LikedPosts.post_id = Posts.post_id`;
 			Object.assign(bind, {
 				liked_by_resident_account_id: resident_account_id,
-				as_barangay_admin: as_barangay_admin,
+				// as_barangay_admin: as_barangay_admin,
 			});
 			orderByQuery = "ORDER BY LikedPosts.created_at DESC";
 		}
@@ -194,7 +198,7 @@ export const findAllPaginated = async (req, res) => {
 
 	Object.assign(bind, {
 		resident_account_id: resident_account_id,
-		as_barangay_admin: as_barangay_admin,
+		// as_barangay_admin: as_barangay_admin,
 	});
 
 	const [results, metadata] = await db.sequelize.query(
@@ -209,13 +213,15 @@ export const findAllPaginated = async (req, res) => {
 		${isFavoriteQuery}
 		${
 			specific
-				? "WHERE Posts.resident_account_id = $resident_account_id"
+				? "WHERE Posts.resident_account_id = $resident_account_id AND Posts.as_barangay_admin = 0"
 				: likedPosts && req.session.user?.resident_account_id
 				? "WHERE LikedPosts.resident_account_id = $resident_account_id"
 				: likedPosts
 				? "WHERE LikedPosts.resident_account_id = $resident_account_id"
 				: ""
 		}
+		${postsByBarangay ? "WHERE B.barangay_id = " + barangay_id + " AND Posts.as_barangay_admin = 1" : ""}
+		${announcementsOnly ? `AND (PT.name = "Announcement" OR PT.name = "Advisory")` : ""}
 		${orderByQuery} LIMIT $limit OFFSET $offset;`,
 		{
 			bind: bind,
@@ -396,21 +402,71 @@ export const update = async (req, res) => {
 };
 
 export const destroy = async (req, res) => {
-	const id = req.params.id;
+	const post_id = req.params.post_id;
 
-	const barangay = await Barangay.findByPk(id);
+	const post = await Post.findByPk(post_id, {
+		include: [
+			{
+				model: PostImage,
+				attributes: ["image_link"],
+				as: "images",
+			},
+			{
+				model: ResidentAccount,
+				as: "resident_account",
+				include: {
+					model: BarangayRole,
+					as: "role",
+					include: {
+						model: Barangay,
+						as: "barangay",
+					},
+				},
+			},
+		],
+	});
 
-	//TODO: Check if barangay has existing residents, do not delete if it has existing residents that is not superadmin.
+	if (!post) {
+		res.status(404).send({ message: "Not found" });
+	}
 
-	Barangay.destroy({
-		where: { barangay_id: id },
-	})
-		.then((data) => {
-			res.send({ message: "Data deleted successfully!" });
-		})
-		.catch((err) => {
-			res.status(400).send({ message: err });
+	// DElete images first
+	// 20221024093109download.jpg
+	// 20221026232334popo.png
+	if (post.images.length > 0) {
+		try {
+			let form = new FormData();
+			let imageUrlsArray = [];
+			post.images.forEach((image) => {
+				imageUrlsArray.push(image.image_link);
+			});
+			let params = "?";
+			for (let imageUrlIndex in imageUrlsArray) {
+				params += `${imageUrlIndex != 0 ? "&" : ""}image_files[]=${imageUrlsArray[imageUrlIndex]}`;
+			}
+			params += "&image_type=post";
+			params += "&directory=" + post.resident_account.role.barangay.directory;
+			params += "&sub_directory=" + post.resident_account.directory;
+
+			const { data: deleteImageMessage } = await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/delete` + params, {
+				headers: { ...form.getHeaders() },
+			});
+			console.log("DELTED FILES", deleteImageMessage);
+			console.log("PARAMS", params);
+		} catch (error) {
+			console.log(error);
+			res.status(500).send({ message: error });
+		}
+	}
+
+	try {
+		const data = await Post.destroy({
+			where: { post_id },
 		});
+		res.send({ message: "Data deleted successfully!", data });
+	} catch (error) {
+		res.status(500).send({ message: error });
+	}
 };
 
 /* ========================================================================== */
