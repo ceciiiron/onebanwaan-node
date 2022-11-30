@@ -123,25 +123,31 @@ const formatPaginatedData = (fetchedData, total, page, limit) => {
 	return { totalItems, data: fetchedData, totalPages, currentPage, rowPerPage: limit };
 };
 
-export const findAllPaginated = async (req, res) => {
-	const {
-		page = 0,
-		size = 10,
-		search,
-		sortBy = "created_at",
-		sortOrder = "DESC",
-		resident_account_id,
-		as_barangay_admin = false,
-		likedPosts = false,
-		current = false,
-		specific = false,
-		postsByBarangay = false,
-		barangay_id = "",
-		announcementsOnly = false,
-	} = req.query;
-	const { limit, offset } = getPagination(page, size);
+const fields = [
+	"Posts.*",
+	"PT.name as post_type_name",
+	"RA.profile_image_link",
+	"RA.professional_title",
+	"RA.first_name",
+	"RA.middle_initial",
+	"RA.last_name",
+	"RA.suffix",
+	"RA.directory as resident_directory",
+	"B.barangay_id as resident_from_barangay_id",
+	"B.logo",
+	"B.name",
+	"B.number",
+	"B.directory as barangay_directory",
+	"HeartCounter.hearts_count",
+	"PI.post_images",
+];
 
-	const fields = [
+export const findAllPaginated = async (req, res) => {
+	const { page = 0, size = 10, search, sortBy = "created_at", sortOrder = "DESC", resident_account_id, likedPosts = false, specific = false } = req.query;
+	const { limit, offset } = getPagination(page, size);
+	const bind = { limit: limit, offset: offset };
+
+	const selectedFields = [
 		"Posts.*",
 		"PT.name as post_type_name",
 		"RA.profile_image_link",
@@ -160,6 +166,97 @@ export const findAllPaginated = async (req, res) => {
 		"PI.post_images",
 	];
 
+	let orderByQuery = "ORDER BY Posts.created_at DESC";
+	let isFavoriteQuery = "";
+
+	if (req.session.user?.resident_account_id) {
+		selectedFields.push("(IsFavorite.post_heart_id IS NOT NULL) as is_favorite");
+
+		if (likedPosts) {
+			isFavoriteQuery += ` INNER JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_resident_account_id)  LikedPosts ON LikedPosts.post_id = Posts.post_id
+			`;
+			Object.assign(bind, {
+				liked_by_resident_account_id: resident_account_id,
+			});
+			orderByQuery = "ORDER BY LikedPosts.created_at DESC";
+		}
+
+		isFavoriteQuery += ` LEFT JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_current_resident_account_id) as IsFavorite ON IsFavorite.post_id = Posts.post_id`;
+
+		Object.assign(bind, {
+			liked_by_current_resident_account_id: req.session.user?.resident_account_id,
+		});
+	} else {
+		if (likedPosts) {
+			isFavoriteQuery = ` INNER JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_resident_account_id  ) as LikedPosts ON LikedPosts.post_id = Posts.post_id`;
+			Object.assign(bind, {
+				liked_by_resident_account_id: resident_account_id,
+			});
+			orderByQuery = "ORDER BY LikedPosts.created_at DESC";
+		}
+	}
+
+	Object.assign(bind, {
+		resident_account_id: resident_account_id,
+	});
+
+	const [results, metadata] = await db.sequelize.query(
+		`SELECT ${selectedFields.join(",")}
+		FROM Posts 
+		INNER JOIN ResidentAccounts RA ON RA.resident_account_id = Posts.resident_account_id
+		INNER JOIN BarangayRoles BR ON BR.barangay_role_id = RA.barangay_role_id
+		INNER JOIN Barangays B ON B.barangay_id = BR.barangay_id
+		LEFT JOIN PostTypes PT ON PT.post_type_id = Posts.post_type_id
+		LEFT JOIN (SELECT GROUP_CONCAT(image_link SEPARATOR "|") as post_images, post_id FROM PostImages GROUP BY post_id ORDER BY post_image_id ASC) as PI ON PI.post_id = Posts.post_id
+		LEFT JOIN (SELECT COUNT(*) as hearts_count, post_id FROM PostHearts GROUP BY post_id) as HeartCounter ON HeartCounter.post_id = Posts.post_id
+		${isFavoriteQuery}
+		${
+			req.session.user?.resident_account_id
+				? "WHERE (Posts.barangay_id IS NULL OR Posts.barangay_id = " + req.session.user.role.barangay_id + ")"
+				: "WHERE Posts.barangay_id IS NULL "
+		}
+		${
+			specific
+				? "AND Posts.resident_account_id = $resident_account_id AND Posts.as_barangay_admin = 0"
+				: likedPosts
+				? "AND LikedPosts.resident_account_id = $resident_account_id"
+				: ""
+		}
+		${orderByQuery} LIMIT $limit OFFSET $offset;`,
+		{
+			bind: bind,
+		}
+	);
+
+	//GET TOTAL COUNT QUERY
+	const [rs, md] = await db.sequelize.query(
+		`SELECT COUNT(*) as totalItems
+		FROM Posts 
+		INNER JOIN ResidentAccounts RA ON RA.resident_account_id = Posts.resident_account_id
+		INNER JOIN BarangayRoles BR ON BR.barangay_role_id = RA.barangay_role_id
+		INNER JOIN Barangays B ON B.barangay_id = BR.barangay_id`
+	);
+
+	const totalItems = rs[0].totalItems;
+
+	const response = formatPaginatedData(results, totalItems, page, limit);
+
+	res.status(200).send(response);
+};
+
+export const findAllByBarangayPaginated = async (req, res) => {
+	const {
+		page = 0,
+		size = 10,
+		search,
+		sortBy = "created_at",
+		sortOrder = "DESC",
+		resident_account_id,
+		barangay_id = "",
+		announcementsOnly = false,
+	} = req.query;
+	const { limit, offset } = getPagination(page, size);
+
 	const bind = { limit: limit, offset: offset };
 
 	let orderByQuery = "ORDER BY Posts.created_at DESC";
@@ -169,36 +266,16 @@ export const findAllPaginated = async (req, res) => {
 	if (req.session.user?.resident_account_id) {
 		fields.push("(IsFavorite.post_heart_id IS NOT NULL) as is_favorite");
 
-		if (likedPosts) {
-			isFavoriteQuery += ` INNER JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_resident_account_id)  LikedPosts ON LikedPosts.post_id = Posts.post_id
-			`;
-			Object.assign(bind, {
-				liked_by_resident_account_id: resident_account_id,
-				// as_barangay_admin: as_barangay_admin,
-			});
-			orderByQuery = "ORDER BY LikedPosts.created_at DESC";
-		}
-
 		isFavoriteQuery += ` LEFT JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_current_resident_account_id) as IsFavorite ON IsFavorite.post_id = Posts.post_id`;
 
 		Object.assign(bind, {
 			liked_by_current_resident_account_id: req.session.user?.resident_account_id,
-			// as_barangay_admin: as_barangay_admin,
 		});
-	} else {
-		if (likedPosts) {
-			isFavoriteQuery = ` INNER JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_resident_account_id  ) as LikedPosts ON LikedPosts.post_id = Posts.post_id`;
-			Object.assign(bind, {
-				liked_by_resident_account_id: resident_account_id,
-				// as_barangay_admin: as_barangay_admin,
-			});
-			orderByQuery = "ORDER BY LikedPosts.created_at DESC";
-		}
 	}
 
 	Object.assign(bind, {
 		resident_account_id: resident_account_id,
-		// as_barangay_admin: as_barangay_admin,
+		barangay_id: barangay_id,
 	});
 
 	const [results, metadata] = await db.sequelize.query(
@@ -211,16 +288,7 @@ export const findAllPaginated = async (req, res) => {
 		LEFT JOIN (SELECT GROUP_CONCAT(image_link SEPARATOR "|") as post_images, post_id FROM PostImages GROUP BY post_id ORDER BY post_image_id ASC) as PI ON PI.post_id = Posts.post_id
 		LEFT JOIN (SELECT COUNT(*) as hearts_count, post_id FROM PostHearts GROUP BY post_id) as HeartCounter ON HeartCounter.post_id = Posts.post_id
 		${isFavoriteQuery}
-		${
-			specific
-				? "WHERE Posts.resident_account_id = $resident_account_id AND Posts.as_barangay_admin = 0"
-				: likedPosts && req.session.user?.resident_account_id
-				? "WHERE LikedPosts.resident_account_id = $resident_account_id"
-				: likedPosts
-				? "WHERE LikedPosts.resident_account_id = $resident_account_id"
-				: ""
-		}
-		${postsByBarangay ? "WHERE B.barangay_id = " + barangay_id + " AND Posts.as_barangay_admin = 1" : ""}
+		WHERE B.barangay_id = $barangay_id AND Posts.as_barangay_admin = 1
 		${announcementsOnly ? `AND (PT.name = "Announcement" OR PT.name = "Advisory")` : ""}
 		${orderByQuery} LIMIT $limit OFFSET $offset;`,
 		{
@@ -242,73 +310,51 @@ export const findAllPaginated = async (req, res) => {
 	const response = formatPaginatedData(results, totalItems, page, limit);
 
 	res.status(200).send(response);
+};
 
-	// 	where: condition,
-	// 	limit,
-	// 	offset,
-	// 	subQuery: false,
-	// 	distinct: true,
-	// 	// raw: true,
-	// 	// group: ["post_id"],
-	// 	attributes: [
-	// 		"post_id",
-	// 		"resident_account_id",
-	// 		"title",
-	// 		"content",
-	// 		"as_barangay_admin",
-	// 		[db.sequelize.fn("COUNT", db.sequelize.col("hearts.post_heart_id")), "heart_counts"],
-	// 		// [db.sequelize.fn("COUNT", db.sequelize.col("*")), "AAAAAAAAAAA"],
-	// 		[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("Post.created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
-	// 		[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("Post.updated_at"), "%m-%d-%Y %H:%i:%s"), "updated_at"],
-	// 	],
-	// 	include: [
-	// 		{
-	// 			attributes: ["professional_title", "first_name", "middle_initial", "last_name", "suffix", "directory", "barangay_role_id"],
-	// 			model: ResidentAccount,
-	// 			as: "resident_account",
-	// 			include: {
-	// 				model: BarangayRole,
-	// 				attributes: ["barangay_role_id", "name", "barangay_id"],
-	// 				required: true,
-	// 				as: "role",
-	// 				include: [
-	// 					{
-	// 						model: Barangay,
-	// 						as: "barangay",
-	// 					},
-	// 				],
-	// 			},
-	// 		},
-	// 		{
-	// 			attributes: ["post_image_id", "image_link"],
-	// 			model: PostImage,
-	// 			as: "images",
-	// 			// order: [[{ model: PostImage, as: "images" }, "post_image_id", "DESC"]],
-	// 		},
-	// 		{
-	// 			model: PostHeart,
+export const findAllPrivatePaginated = async (req, res) => {
+	const { page = 0, size = 10, search, sortBy = "created_at", sortOrder = "DESC", barangay_id = "" } = req.query;
+	const { limit, offset } = getPagination(page, size);
 
-	// 			// INCLUDE THIS FOR LIKED POSTS OF CERTAIN USER;
-	// 			// required: true,
-	// 			// where: {
-	// 			// 	resident_account_id: 7,
-	// 			// },
-	// 			//============================================
-	// 			as: "hearts",
-	// 		},
-	// 	],
-	// 	order: [
-	// 		[sortBy, sortOrder],
-	// 		// [{ model: PostImage, as: "images" }, "post_image_id", "ASC"],
-	// 	],
-	// })
-	// 	.then((data) => {
-	// 		const response = formatPaginatedData(data, page, limit);
-	// 		res.send(response);
-	// 	})
-	// 	.catch((err) => {
-	// 		res.status(500).send({ message: err.message || "An error occured while retrieving data" });
-	// 	});
+	let orderByQuery = "ORDER BY Posts.created_at DESC";
+	fields.push("(IsFavorite.post_heart_id IS NOT NULL) as is_favorite");
+
+	const [results, metadata] = await db.sequelize.query(
+		`SELECT ${fields.join(",")}
+		FROM Posts 
+		INNER JOIN ResidentAccounts RA ON RA.resident_account_id = Posts.resident_account_id
+		INNER JOIN BarangayRoles BR ON BR.barangay_role_id = RA.barangay_role_id
+		INNER JOIN Barangays B ON B.barangay_id = BR.barangay_id
+		LEFT JOIN PostTypes PT ON PT.post_type_id = Posts.post_type_id
+		LEFT JOIN (SELECT GROUP_CONCAT(image_link SEPARATOR "|") as post_images, post_id FROM PostImages GROUP BY post_id ORDER BY post_image_id ASC) as PI ON PI.post_id = Posts.post_id
+		LEFT JOIN (SELECT COUNT(*) as hearts_count, post_id FROM PostHearts GROUP BY post_id) as HeartCounter ON HeartCounter.post_id = Posts.post_id
+		LEFT JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_current_resident_account_id) as IsFavorite ON IsFavorite.post_id = Posts.post_id
+		WHERE Posts.barangay_id = $barangay_id
+		${orderByQuery} LIMIT $limit OFFSET $offset;`,
+		{
+			bind: {
+				limit: limit,
+				offset: offset,
+				barangay_id: barangay_id,
+				liked_by_current_resident_account_id: req.session.user?.resident_account_id,
+			},
+		}
+	);
+
+	//GET TOTAL COUNT QUERY
+	const [rs, md] = await db.sequelize.query(
+		`SELECT COUNT(*) as totalItems
+		FROM Posts 
+		INNER JOIN ResidentAccounts RA ON RA.resident_account_id = Posts.resident_account_id
+		INNER JOIN BarangayRoles BR ON BR.barangay_role_id = RA.barangay_role_id
+		INNER JOIN Barangays B ON B.barangay_id = BR.barangay_id`
+	);
+
+	const totalItems = rs[0].totalItems;
+
+	const response = formatPaginatedData(results, totalItems, page, limit);
+
+	res.status(200).send(response);
 };
 
 export const findOne = async (req, res) => {

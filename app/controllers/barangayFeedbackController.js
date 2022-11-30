@@ -1,12 +1,10 @@
 import db from "../models/index.js";
 // import dayjs from "dayjs";
 import capitalize from "capitalize";
-import bcrypt from "bcryptjs";
 
 const Barangay = db.sequelize.models.Barangay;
-const BarangayRole = db.sequelize.models.BarangayRole;
+const BarangayFeedback = db.sequelize.models.BarangayFeedback;
 const ResidentAccount = db.sequelize.models.ResidentAccount;
-// const ResidentDetail = db.sequelize.models.ResidentDetail;
 const Op = db.Sequelize.Op;
 
 import axios from "axios";
@@ -17,35 +15,19 @@ import { nanoid } from "nanoid";
 
 export const create = async (req, res) => {
 	try {
-		const residentAccount = {
-			// professional_title: capitalize.words(req.body.professional_title?.trim() ?? "", true) || null,
-			first_name: capitalize.words(req.body.first_name),
-			middle_initial: capitalize.words(req.body.middle_initial?.trim() ?? "", true) || null,
-			last_name: capitalize.words(req.body.last_name),
-			suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
-			email: req.body.email?.trim(),
-			password: bcrypt.hashSync(req.body.password.trim(), 8),
-			barangay_role_id: req.body.barangay_role_id,
-			directory: nanoid(16),
-			// privacy: req.body.privacy,
-			// bio: req.body.bio?.trim() ?? null,
+		const feedback = {
+			barangay_feedback_id: req.body.barangay_feedback_id,
+			resident_account_id: req.body.resident_account_id,
+			barangay_id: req.body.barangay_id,
+			rating: req.body.rating,
+			suggestions: req.body?.suggestions?.trim(),
 		};
 
-		console.log("AAAAA", residentAccount);
+		console.log("FEEDBACK", feedback);
 
-		if (await ResidentAccount.findOne({ where: { email: residentAccount.email } })) {
-			return res.status(400).send({
-				error: {
-					msg: "existing_resident_account",
-					param: "email",
-				},
-			});
-		}
+		const [feedbackInstance, created] = await BarangayFeedback.upsert(feedback);
 
-		const newResident = await ResidentAccount.create(residentAccount);
-		delete newResident.dataValues.password;
-
-		res.status(201).send(newResident);
+		res.status(201).send({ feedbackInstance, created });
 	} catch (error) {
 		res.status(500).send({ message: `Could not upload data: ${error}`, stack: error.stack });
 	}
@@ -155,25 +137,31 @@ export const findAll = (req, res) => {
 };
 
 export const findOne = async (req, res) => {
-	const { resident_account_id } = req.params;
+	const { resident_account_id } = req.query;
+	const { barangay_id } = req.params;
+
+	if (!resident_account_id || !barangay_id) {
+		return res.status(404).send({ message: `Feedback not found` });
+	}
 
 	try {
-		const residentAccount = await ResidentAccount.findByPk(resident_account_id, {
-			include: {
-				model: BarangayRole,
-				attributes: ["barangay_role_id", "name"],
-				required: true,
-				as: "role",
-				include: [
-					{
-						model: Barangay,
-						as: "barangay",
-					},
-				],
-			},
+		const feedback = await BarangayFeedback.findOne({
+			where: { barangay_id, resident_account_id },
+			// include: {
+			// 	// model: BarangayRole,
+			// 	// attributes: ["barangay_role_id", "name"],
+			// 	// required: true,
+			// 	// as: "role",
+			// 	// include: [
+			// 	// 	{
+			// 	// 		model: Barangay,
+			// 	// 		as: "barangay",
+			// 	// 	},
+			// 	// ],
+			// },
 		});
 
-		return residentAccount ? res.send(residentAccount) : res.status(404).send({ message: `Not Found` });
+		return feedback ? res.send(feedback) : res.status(404).send({ message: `Feedback not found` });
 	} catch (error) {
 		res.status(400).send({ message: `An error occured while retrieving data: ${error}` });
 	}
@@ -189,9 +177,6 @@ export const update = async (req, res) => {
 		last_name: capitalize.words(req.body.last_name),
 		suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
 		email: req.body.email?.trim(),
-		// passsword: bcrypt.hashSync(req.body.password.trim(), 8),
-		// privacy: req.body.privacy,
-		// barangay_role_id: req.body.barangay_role_id,
 		bio: req.body.bio?.trim() ?? null,
 	};
 
@@ -333,46 +318,6 @@ export const updateAccountStatus = async (req, res) => {
 		});
 
 		res.send({ message: "Account status updated successfully!", affectedRow: affectedRow });
-	} catch (error) {
-		res.status(500).send({ message: "Error changing password", error: error, stack: error.stack });
-	}
-};
-
-/* ========================================================================== */
-/*                               CHANGE PASSWORD                              */
-/* ========================================================================== */
-
-export const changePassword = async (req, res) => {
-	const resident_account_id = req.params.resident_account_id;
-
-	try {
-		const residentPassword = {
-			password: bcrypt.hashSync(req.body.password?.trim(), 8),
-		};
-
-		const affectedRow = await ResidentAccount.update(residentPassword, {
-			where: { resident_account_id },
-		});
-
-		res.send({ message: "Password changed successfully!", affectedRow: affectedRow });
-	} catch (error) {
-		res.status(500).send({ message: "Error changing password", error: error, stack: error.stack });
-	}
-};
-
-// LOGGED IN
-export const currentChangePassword = async (req, res) => {
-	//TODO: Add backend validation
-	try {
-		const residentPassword = {
-			password: bcrypt.hashSync(req.body.password?.trim(), 8),
-		};
-
-		const affectedRow = await ResidentAccount.update(residentPassword, {
-			where: { resident_account_id: req.session.user.resident_account_id },
-		});
-
-		res.send({ message: "Password changed successfully!", affectedRow: affectedRow });
 	} catch (error) {
 		res.status(500).send({ message: "Error changing password", error: error, stack: error.stack });
 	}

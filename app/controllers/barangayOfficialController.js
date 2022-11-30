@@ -130,7 +130,7 @@ export const findOne = async (req, res) => {
 
 	const data = await BarangayOfficial.findByPk(barangay_official_id);
 
-	return data ? res.send(data) : res.status(404).send({ message: `Not Found` });
+	return data ? res.send(data) : res.status(404).send({ message: `Official not found` });
 };
 
 export const update = async (req, res) => {

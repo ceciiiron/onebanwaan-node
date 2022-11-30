@@ -1,4 +1,13 @@
-import { create, findAllPaginated, findOne, destroy, heart, destoryHeart } from "../controllers/postController.js";
+import {
+	create,
+	findAllPaginated,
+	findAllPrivatePaginated,
+	findAllByBarangayPaginated,
+	findOne,
+	destroy,
+	heart,
+	destoryHeart,
+} from "../controllers/postController.js";
 
 import { findAllCommentsByPost, findOneComment, createComment, updateComment, destroyComment } from "../controllers/postCommentController.js";
 
@@ -18,14 +27,15 @@ const upload = multer({
 
 export default (app) => {
 	router.get("/types", async (req, res) => {
-		//types for dropdown
 		const postTypes = await PostType.findAll();
 
 		res.status(200).send(postTypes);
 	});
 	// isResident
-	router.post("/", upload.array("image_files", 4), create);
+	router.post("/", upload.array("image_files", 4), isResident, create);
 	router.get("/paginated", findAllPaginated);
+	router.get("/private/paginated", isResident, findAllPrivatePaginated);
+	router.get("/barangay/paginated", findAllByBarangayPaginated);
 
 	/* ============================== HEART ROUTES ============================== */
 	router.post("/:post_id/heart", isResident, heart);

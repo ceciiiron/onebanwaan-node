@@ -30,7 +30,7 @@ const formatPaginatedData = (fetchedData, page, limit) => {
 };
 
 export const findAllCommentsByPost = (req, res) => {
-	const { page = 0, size = 10, name, number } = req.query;
+	const { page = 0, size = 20, name, number } = req.query;
 	const { limit, offset } = getPagination(page, size);
 	const post_id = req.params.post_id;
 

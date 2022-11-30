@@ -95,7 +95,7 @@ export const findOne = async (req, res) => {
 	try {
 		const barangay = await Barangay.findByPk(id);
 
-		return barangay ? res.send(barangay) : res.status(404).send({ message: `Not Found` });
+		return barangay ? res.send(barangay) : res.status(404).send({ message: `Barangay role not found` });
 	} catch (error) {
 		res.status(500).send({ message: `An error occured while retrieving data: ${error}` });
 	}

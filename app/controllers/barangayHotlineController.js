@@ -139,7 +139,7 @@ export const findOne = async (req, res) => {
 
 	const data = await BarangayHotline.findByPk(barangay_hotline_id);
 
-	return data ? res.send(data) : res.status(404).send({ message: `Not Found` });
+	return data ? res.send(data) : res.status(404).send({ message: `Hotline not found` });
 };
 
 export const update = async (req, res) => {

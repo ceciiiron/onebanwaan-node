@@ -53,7 +53,7 @@ export function login(req, res) {
 export function logout(req, res) {
 	req.session.destroy((err) => {
 		if (err) console.log(`Error destroying session: ${err}`);
-		res.status(200).send({ message: "Logged out successfully" });
+		res.status(200).send({ message: "Account logged out successfully" });
 	});
 }
 
