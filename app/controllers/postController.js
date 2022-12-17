@@ -26,7 +26,7 @@ export const create = async (req, res) => {
 			// resident_account_id: req.body.resident_account_id,
 			post_type_id: req.body.post_type_id === "None" ? null : req.body.post_type_id,
 			barangay_id: req.body.barangay_id == "None" ? null : req.body.barangay_id,
-			title: capitalize.words(req.body.title?.trim() ?? "", true) || null,
+			title: capitalize(req.body.title?.trim() ?? "", true) || null,
 			content: req.body.content?.trim() || null,
 			privacy: req.body.privacy || null,
 			as_barangay_admin: req.body.as_barangay_admin || false,

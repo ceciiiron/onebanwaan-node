@@ -8,7 +8,7 @@ export default (app) => {
 	router.delete("/:barangay_id/feedback/:barangay_feedback_id", destroy);
 	router.post("/:barangay_id/feedback", create);
 
-	router.get("/feedback/", findAll);
+	router.get("/:barangay_id/feedbacks/", findAll);
 
 	app.use("/api/barangays", router);
 };

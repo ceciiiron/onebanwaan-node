@@ -22,13 +22,15 @@ export const create = async (req, res) => {
 		const barangay = {
 			name: capitalize.words(req.body.name),
 			number: req.body.number,
+			lat: req.body.lat,
+			lng: req.body.lng,
 			bio: req.body.bio?.trim(),
 			address: capitalize.words(req.body.address?.trim() ?? "", true) || null,
 			directory: nanoid(16),
 		};
 
 		const residentAccount = {
-			professional_title: capitalize.words(req.body.professional_title?.trim() ?? "", true) || null,
+			// professional_title: capitalize.words(req.body.professional_title?.trim() ?? "", true) || null,
 			first_name: capitalize.words(req.body.first_name),
 			middle_initial: capitalize.words(req.body.middle_initial?.trim() ?? "", true) || null,
 			last_name: capitalize.words(req.body.last_name),
@@ -215,6 +217,8 @@ export const findOne = async (req, res) => {
 		const barangay = await Barangay.findByPk(id, {
 			attributes: [
 				"barangay_id",
+				"lat",
+				"lng",
 				"name",
 				"logo",
 				"number",

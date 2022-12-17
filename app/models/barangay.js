@@ -62,6 +62,8 @@ export default (sequelize, DataTypes) => {
 			bio: { type: DataTypes.STRING },
 			address: { type: DataTypes.STRING, allowNull: false },
 			directory: { type: DataTypes.STRING, allowNull: false },
+			lat: { type: DataTypes.DOUBLE },
+			lng: { type: DataTypes.DOUBLE },
 		},
 		{
 			sequelize,
