@@ -62,7 +62,7 @@ export default (sequelize, DataTypes) => {
 			//if naka login si resident, union join to post na may resident_barangay_id = barangay_id;
 			//Only registered residents of Brgy Gogon can only see this post.
 			title: { type: DataTypes.STRING },
-			content: { type: DataTypes.STRING(1500) },
+			content: { type: DataTypes.STRING(3000) },
 			privacy: { type: DataTypes.BOOLEAN, defaultValue: false },
 			as_barangay_admin: { type: DataTypes.BOOLEAN, defaultValue: false }, //paglumipat sya brgy, set all posts to barangay_admin = false where resident_id = ?
 		},
