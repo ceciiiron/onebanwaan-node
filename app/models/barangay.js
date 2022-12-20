@@ -58,6 +58,7 @@ export default (sequelize, DataTypes) => {
 			},
 			name: { type: DataTypes.STRING, allowNull: false },
 			logo: { type: DataTypes.STRING(500) },
+			cover_image_link: { type: DataTypes.STRING(500) },
 			number: { type: DataTypes.INTEGER, allowNull: false },
 			bio: { type: DataTypes.STRING },
 			address: { type: DataTypes.STRING, allowNull: false },
