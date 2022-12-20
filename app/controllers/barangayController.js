@@ -193,6 +193,7 @@ export const findAll = (req, res) => {
 
 	if (with_images == 1) {
 		attributes.push("logo");
+		attributes.push("cover_image_link");
 		attributes.push("directory");
 	}
 
@@ -221,6 +222,7 @@ export const findOne = async (req, res) => {
 				"lng",
 				"name",
 				"logo",
+				"cover_image_link",
 				"number",
 				"bio",
 				"address",
