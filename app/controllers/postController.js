@@ -139,6 +139,7 @@ const fields = [
 	"B.number",
 	"B.directory as barangay_directory",
 	"HeartCounter.hearts_count",
+	"CommentCounter.comments_count",
 	"PI.post_images",
 ];
 
@@ -163,6 +164,7 @@ export const findAllPaginated = async (req, res) => {
 		"B.number",
 		"B.directory as barangay_directory",
 		"HeartCounter.hearts_count",
+		"CommentCounter.comments_count",
 		"PI.post_images",
 	];
 
@@ -209,6 +211,7 @@ export const findAllPaginated = async (req, res) => {
 		LEFT JOIN PostTypes PT ON PT.post_type_id = Posts.post_type_id
 		LEFT JOIN (SELECT GROUP_CONCAT(image_link SEPARATOR "|") as post_images, post_id FROM PostImages GROUP BY post_id ORDER BY post_image_id ASC) as PI ON PI.post_id = Posts.post_id
 		LEFT JOIN (SELECT COUNT(*) as hearts_count, post_id FROM PostHearts GROUP BY post_id) as HeartCounter ON HeartCounter.post_id = Posts.post_id
+		LEFT JOIN (SELECT COUNT(*) as comments_count, post_id FROM PostComments GROUP BY post_id) as CommentCounter ON CommentCounter.post_id = Posts.post_id		
 		${isFavoriteQuery}
 		${
 			req.session.user?.resident_account_id
@@ -287,6 +290,7 @@ export const findAllByBarangayPaginated = async (req, res) => {
 		LEFT JOIN PostTypes PT ON PT.post_type_id = Posts.post_type_id
 		LEFT JOIN (SELECT GROUP_CONCAT(image_link SEPARATOR "|") as post_images, post_id FROM PostImages GROUP BY post_id ORDER BY post_image_id ASC) as PI ON PI.post_id = Posts.post_id
 		LEFT JOIN (SELECT COUNT(*) as hearts_count, post_id FROM PostHearts GROUP BY post_id) as HeartCounter ON HeartCounter.post_id = Posts.post_id
+		LEFT JOIN (SELECT COUNT(*) as comments_count, post_id FROM PostComments GROUP BY post_id) as CommentCounter ON CommentCounter.post_id = Posts.post_id	
 		${isFavoriteQuery}
 		WHERE B.barangay_id = $barangay_id AND Posts.as_barangay_admin = 1
 		${announcementsOnly ? `AND (PT.name = "Announcement" OR PT.name = "Advisory")` : ""}
@@ -328,6 +332,7 @@ export const findAllPrivatePaginated = async (req, res) => {
 		LEFT JOIN PostTypes PT ON PT.post_type_id = Posts.post_type_id
 		LEFT JOIN (SELECT GROUP_CONCAT(image_link SEPARATOR "|") as post_images, post_id FROM PostImages GROUP BY post_id ORDER BY post_image_id ASC) as PI ON PI.post_id = Posts.post_id
 		LEFT JOIN (SELECT COUNT(*) as hearts_count, post_id FROM PostHearts GROUP BY post_id) as HeartCounter ON HeartCounter.post_id = Posts.post_id
+		LEFT JOIN (SELECT COUNT(*) as comments_count, post_id FROM PostComments GROUP BY post_id) as CommentCounter ON CommentCounter.post_id = Posts.post_id			
 		LEFT JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_current_resident_account_id) as IsFavorite ON IsFavorite.post_id = Posts.post_id
 		WHERE Posts.barangay_id = $barangay_id
 		${orderByQuery} LIMIT $limit OFFSET $offset;`,

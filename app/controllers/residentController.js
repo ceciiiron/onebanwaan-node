@@ -18,7 +18,6 @@ import { nanoid } from "nanoid";
 export const create = async (req, res) => {
 	try {
 		const residentAccount = {
-			// professional_title: capitalize.words(req.body.professional_title?.trim() ?? "", true) || null,
 			first_name: capitalize.words(req.body.first_name),
 			middle_initial: capitalize.words(req.body.middle_initial?.trim() ?? "", true) || null,
 			last_name: capitalize.words(req.body.last_name),
@@ -28,7 +27,6 @@ export const create = async (req, res) => {
 			barangay_role_id: req.body.barangay_role_id,
 			directory: nanoid(16),
 			// privacy: req.body.privacy,
-			// bio: req.body.bio?.trim() ?? null,
 		};
 
 		console.log("AAAAA", residentAccount);
@@ -112,7 +110,6 @@ export const findAll = (req, res) => {
 				db.sequelize.fn(
 					"CONCAT_WS",
 					"|",
-					db.sequelize.col("professional_title"),
 					db.sequelize.col("first_name"),
 					db.sequelize.col("middle_initial"),
 					db.sequelize.col("last_name"),
@@ -183,15 +180,13 @@ export const update = async (req, res) => {
 	const { resident_account_id } = req.params;
 
 	const updateResidentAccount = {
-		professional_title: capitalize.words(req.body.professional_title?.trim() ?? "", true) || null,
+		// professional_title: capitalize.words(req.body.professional_title?.trim() ?? "", true) || null,
 		first_name: capitalize.words(req.body.first_name),
 		middle_initial: capitalize.words(req.body.middle_initial?.trim() ?? "", true) || null,
 		last_name: capitalize.words(req.body.last_name),
 		suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
 		email: req.body.email?.trim(),
-		// passsword: bcrypt.hashSync(req.body.password.trim(), 8),
 		// privacy: req.body.privacy,
-		// barangay_role_id: req.body.barangay_role_id,
 		bio: req.body.bio?.trim() ?? null,
 	};
 

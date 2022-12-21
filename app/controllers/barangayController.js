@@ -306,13 +306,108 @@ export const destroy = async (req, res) => {
 			res.status(400).send({ message: err });
 		});
 };
-/* ========================================================================== */
-/*                                    UTILS                                   */
-/* ========================================================================== */
-// const findResidentByEmail = async (email) => {
-// 	return await ResidentAccount.findOne({ where: { email } });
-// };
 
-// const findBarangayByNumber = async (number) => {
-// 	return await Barangay.findOne({ where: { number } });
-// };
+/* ========================================================================== */
+/*                              BARANGAY ACCOUNT                              */
+/* ========================================================================== */
+
+export const updatePublicProfile = async (req, res) => {
+	const { barangay_id } = req.params;
+
+	const updateBarangay = {
+		bio: req.body.bio?.trim() ?? null,
+	};
+
+	const barangay = await Barangay.findByPk(barangay_id);
+
+	if (req.files["image_file"]?.[0]) {
+		let form = new FormData();
+		form.append("image_file", req.files["image_file"][0].buffer, {
+			filename: req.files["image_file"][0].originalname.replace(/ /g, ""),
+			contentType: req.files["image_file"][0].mimetype,
+			knownLength: req.files["image_file"][0].size,
+		});
+
+		form.append("image_type", "barangay_logo");
+		form.append("directory", barangay.directory);
+
+		const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/singleimage`, form, {
+			headers: { ...form.getHeaders() },
+		});
+
+		//check if coverfile is present on database.
+		//delete the old image.
+		if (barangay.logo) {
+			const imageUrlsArray = [barangay.logo];
+			let params = "?";
+			for (let imageUrlIndex in imageUrlsArray) {
+				params += `image_files[]=${imageUrlsArray[imageUrlIndex]}`;
+			}
+			params += "&image_type=barangay_logo";
+			params += "&directory=" + barangay.directory;
+			// params += "&sub_directory=" + barangay.directory;
+
+			const { data: deleteImageMessage } = await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/delete` + params, {
+				headers: { ...form.getHeaders() },
+			});
+		}
+
+		updateBarangay.logo = message.image_name;
+	}
+
+	if (req.files["image_cover_file"]?.[0]) {
+		let form = new FormData();
+		form.append("image_cover_file", req.files["image_cover_file"][0].buffer, {
+			filename: req.files["image_cover_file"][0].originalname.replace(/ /g, ""),
+			contentType: req.files["image_cover_file"][0].mimetype,
+			knownLength: req.files["image_cover_file"][0].size,
+		});
+
+		form.append("image_type", "barangay_cover");
+		form.append("directory", barangay.directory);
+		// form.append("sub_directory", residentAccount.directory);
+
+		try {
+			const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/singleimage`, form, {
+				headers: { ...form.getHeaders() },
+			});
+
+			if (barangay.cover_image_link) {
+				const imageUrlsArray = [barangay.cover_image_link];
+				let params = "?";
+				for (let imageUrlIndex in imageUrlsArray) {
+					params += `image_files[]=${imageUrlsArray[imageUrlIndex]}`;
+				}
+				params += "&image_type=barangay_cover";
+				params += "&directory=" + barangay.directory;
+				// params += "&sub_directory=" + residentAccount.directory;
+
+				const { data: deleteImageMessage } = await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/delete` + params, {
+					headers: { ...form.getHeaders() },
+				});
+			}
+
+			updateBarangay.cover_image_link = message.image_name;
+		} catch (error) {
+			console.log("IMAGEERROR", error, error.stack);
+		}
+	}
+
+	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
+
+	res.send({ message: "Data updated successfully!", affectedRow });
+};
+
+export const updateLocation = async (req, res) => {
+	const { barangay_id } = req.params;
+
+	const updateBarangay = {
+		lat: req.body.lat,
+		lng: req.body.lng,
+		address: capitalize.words(req.body.address?.trim() ?? "", true) || null,
+	};
+
+	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
+
+	res.send({ message: "Data updated successfully!", affectedRow });
+};

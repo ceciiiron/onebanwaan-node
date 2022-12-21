@@ -1,4 +1,4 @@
-import { create, findAll, findAllPaginated, findOne, update, destroy } from "../controllers/barangayController.js";
+import { create, findAll, findAllPaginated, findOne, update, destroy, updatePublicProfile, updateLocation } from "../controllers/barangayController.js";
 import express from "express";
 const router = express.Router();
 
@@ -47,7 +47,15 @@ export default (app) => {
 	router.post("/", upload.single("image_file"), create);
 	router.get("/", findAll);
 	router.get("/:id", findOne);
-	router.put("/:id", upload.single("image_file"), update);
+	router.put(
+		"/:barangay_id/publicprofile",
+		upload.fields([
+			{ name: "image_file", maxCount: 1 },
+			{ name: "image_cover_file", maxCount: 1 },
+		]),
+		updatePublicProfile
+	);
+	router.put("/:barangay_id/location", updateLocation);
 	router.delete("/:id", destroy);
 
 	app.use("/api/barangays", router);
