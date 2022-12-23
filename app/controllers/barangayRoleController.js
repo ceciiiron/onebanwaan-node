@@ -1,23 +1,45 @@
 import db from "../models/index.js";
+import capitalize from "capitalize";
 
 const BarangayRole = db.sequelize.models.BarangayRole;
 const BarangayPermission = db.sequelize.models.BarangayPermission;
+const BarangayRolePermission = db.sequelize.models.BarangayRolePermission;
+const ResidentAccount = db.sequelize.models.ResidentAccount;
 const Op = db.Sequelize.Op;
 
 export const create = async (req, res) => {
+	const barangay_id = req.params.barangay_id;
+
 	try {
 		const barangayRole = {
-			name: req.body.name,
-			barangay_id: req.body.barangay_id,
+			name: capitalize.words(req.body.name?.trim() ?? "", true),
+			barangay_id,
 		};
 
-		//Also add the permissions
-		const newBarangayRole = await Barangay.create(barangay);
+		const newBarangayRole = await BarangayRole.create(barangayRole);
 
-		res.send(newBarangayRole);
+		const rolePermissions = [];
+		req.body.barangay_permission_id.forEach((element) => {
+			rolePermissions.push({ barangay_role_id: newBarangayRole.barangay_role_id, barangay_permission_id: element });
+		});
+
+		const results = BarangayRolePermission.bulkCreate(rolePermissions);
+
+		console.log(rolePermissions);
+
+		res.status(201).send({ rolePermissions, results });
 	} catch (error) {
 		//delete file
 		res.status(500).send({ message: `Could not upload data: ${error}` });
+	}
+};
+
+export const findAllPermissions = async (req, res) => {
+	try {
+		const permissions = await BarangayPermission.findAll();
+		res.status(200).send({ permissions });
+	} catch (error) {
+		res.status(500).send({ message: error.message });
 	}
 };
 
@@ -38,14 +60,24 @@ export const findAllByBarangayPaginated = (req, res) => {
 	const { page = 0, size = 10, search, sortBy = "updated_at", sortOrder = "DESC" } = req.query;
 	const barangay_id = req.params.barangay_id;
 	const { limit, offset } = getPagination(page, size);
+	let condition = {};
+	condition.barangay_id = barangay_id;
+
+	if (search) {
+		condition.name = { [Op.like]: `%${search}%` };
+	}
 
 	BarangayRole.findAndCountAll({
-		where: { barangay_id },
+		where: condition,
 		limit,
 		offset,
 		attributes: [
 			"name",
 			"barangay_role_id",
+			[
+				db.sequelize.literal(`(SELECT COUNT(*) FROM ResidentAccounts as accounts WHERE accounts.barangay_role_id = BarangayRole.barangay_role_id)`),
+				"number_of_accounts",
+			],
 			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
 			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("updated_at"), "%m-%d-%Y %H:%i:%s"), "updated_at"],
 		],
@@ -90,10 +122,15 @@ export const findAllByBarangay = (req, res) => {
 };
 
 export const findOne = async (req, res) => {
-	const id = req.params.id;
+	const id = req.params.barangay_role_id;
 
 	try {
-		const barangay = await Barangay.findByPk(id);
+		const barangay = await BarangayRole.findByPk(id, {
+			include: {
+				model: BarangayPermission,
+				as: "barangay_role_permissions",
+			},
+		});
 
 		return barangay ? res.send(barangay) : res.status(404).send({ message: `Barangay role not found` });
 	} catch (error) {
@@ -102,36 +139,55 @@ export const findOne = async (req, res) => {
 };
 
 export const update = async (req, res) => {
-	const id = req.params.id;
+	const { barangay_role_id } = req.params;
 
-	const barangayLogo = await Barangay.findByPk(id, { attributes: ["logo"] });
+	try {
+		const barangayRole = {
+			name: capitalize.words(req.body.name?.trim() ?? "", true),
+		};
 
-	const data = { ...req.body };
+		await BarangayRole.update(barangayRole, { where: { barangay_role_id } });
 
-	if (req.file) {
-		data.logo = __base_dir + "/resources/static/assets/uploads/" + req.file.renamedFile;
-		fs.unlink(barangayLogo.logo, (error) => {});
+		await BarangayRolePermission.destroy({ where: { barangay_role_id } });
+
+		const rolePermissions = [];
+		req.body.barangay_permission_id.forEach((element) => {
+			rolePermissions.push({ barangay_role_id: barangay_role_id, barangay_permission_id: element });
+		});
+
+		const results = BarangayRolePermission.bulkCreate(rolePermissions);
+
+		// console.log(rolePermissions);
+
+		res.send({ message: "Data updated successfully!" });
+	} catch (error) {
+		//delete file
+		res.status(500).send({ message: `Could not upload data: ${error}` });
 	}
-
-	await Barangay.update(data, { where: { barangay_id: id } });
-
-	res.send({ message: "Data updated successfully!" });
 };
 
 export const destroy = async (req, res) => {
-	const id = req.params.id;
+	const { barangay_role_id } = req.params;
 
-	const barangay = await Barangay.findByPk(id);
+	const resident = await ResidentAccount.findOne({ where: { barangay_role_id: barangay_role_id } });
 
-	fs.unlink(barangay.logo, (error) => {
-		Barangay.destroy({
-			where: { barangay_id: id },
+	//check if a role has existing connected resident acount
+	if (resident !== null) {
+		return res.status(400).send({
+			error: {
+				msg: "delete_error",
+				param: "server_error",
+			},
+		});
+	}
+
+	await BarangayRole.destroy({
+		where: { barangay_role_id },
+	})
+		.then((data) => {
+			res.send({ message: "Data deleted successfully!" });
 		})
-			.then((data) => {
-				res.send({ message: "Data deleted successfully!" });
-			})
-			.catch((err) => {
-				res.status(400).send({ message: err });
-			});
-	});
+		.catch((err) => {
+			res.status(400).send({ message: err });
+		});
 };

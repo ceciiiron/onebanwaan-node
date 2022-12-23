@@ -481,9 +481,6 @@ export const destroy = async (req, res) => {
 		res.status(404).send({ message: "Not found" });
 	}
 
-	// DElete images first
-	// 20221024093109download.jpg
-	// 20221026232334popo.png
 	if (post.images.length > 0) {
 		try {
 			let form = new FormData();
