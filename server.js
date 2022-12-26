@@ -84,6 +84,7 @@ app.get("/api", (req, res) => {
 (await import("./app/routes/barangayOfficialRoutes.js")).default(app);
 (await import("./app/routes/barangayHotlineRoutes.js")).default(app);
 (await import("./app/routes/barangayFeedbackRoutes.js")).default(app);
+(await import("./app/routes/barangayDocumentRoutes.js")).default(app);
 (await import("./app/routes/barangayRoutes.js")).default(app);
 
 (await import("./app/routes/residentRoutes.js")).default(app);

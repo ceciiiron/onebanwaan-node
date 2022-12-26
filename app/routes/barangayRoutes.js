@@ -1,4 +1,14 @@
-import { create, findAll, findAllPaginated, findOne, update, destroy, updatePublicProfile, updateLocation } from "../controllers/barangayController.js";
+import {
+	create,
+	findAll,
+	findAllPaginated,
+	findAllDocumentSettings,
+	findOne,
+	update,
+	destroy,
+	updatePublicProfile,
+	updateLocation,
+} from "../controllers/barangayController.js";
 import express from "express";
 const router = express.Router();
 
@@ -44,6 +54,7 @@ export default (app) => {
 	});
 
 	router.get("/paginated", findAllPaginated);
+	router.get("/documentsettings", findAllDocumentSettings);
 	router.post("/", upload.single("image_file"), create);
 	router.get("/", findAll);
 	router.get("/:id", findOne);

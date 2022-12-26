@@ -1,7 +1,7 @@
 import { Model } from "sequelize";
 
 export default (sequelize, DataTypes) => {
-	class DocumentTypes extends Model {
+	class DocumentType extends Model {
 		/**
 		 * Helper method for defining associations.
 		 * This method is not a part of Sequelize lifecycle.
@@ -10,7 +10,7 @@ export default (sequelize, DataTypes) => {
 		static associate(models) {}
 	}
 
-	DocumentTypes.init(
+	DocumentType.init(
 		{
 			document_type_id: {
 				type: DataTypes.INTEGER,
@@ -26,9 +26,9 @@ export default (sequelize, DataTypes) => {
 			timestamps: false,
 			// createdAt: "created_at",
 			// updatedAt: "updated_at",
-			modelName: "DocumentTypes",
+			modelName: "DocumentType",
 		}
 	);
 
-	return DocumentTypes;
+	return DocumentType;
 };

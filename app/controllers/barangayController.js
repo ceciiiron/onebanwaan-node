@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs";
 const Barangay = db.sequelize.models.Barangay;
 const BarangayRole = db.sequelize.models.BarangayRole;
 const BarangayHotline = db.sequelize.models.BarangayHotline;
+const BarangayDocumentSetting = db.sequelize.models.BarangayDocumentSetting;
+const DocumentType = db.sequelize.models.DocumentType;
 const BarangayOfficial = db.sequelize.models.BarangayOfficial;
 const ResidentAccount = db.sequelize.models.ResidentAccount;
 const Op = db.Sequelize.Op;
@@ -106,9 +108,19 @@ export const create = async (req, res) => {
 		//insert selected barangay permissions for new barangay resident role
 		const [rs, md] = await db.sequelize.query(
 			`INSERT INTO BarangayRolePermissions(barangay_role_id, barangay_permission_id) 
-			SELECT $1 as "barangay_role_id", barangay_permission_id FROM BarangayPermissions WHERE name IN ("create_post", "update_post", "delete_post", "heart_post", "comment_post", "update_resident_profile", "request_document_issuance", "request_complaint", "request_other_services", "create_suggestion", "cancel_request")`,
+			SELECT $1 as "barangay_role_id", barangay_permission_id FROM BarangayPermissions WHERE name IN ("create_post")`,
 			{
 				bind: [newResidentBarangayRole.barangay_role_id], //set resident role
+			}
+		);
+
+		//create document settings
+
+		const [rs2, md2] = await db.sequelize.query(
+			`INSERT INTO BarangayDocumentSettings(barangay_id, document_type_id) 
+			SELECT $1 as "barangay_id", document_type_id FROM DocumentTypes`,
+			{
+				bind: [newBarangay.barangay_id], //set barangay_id
 			}
 		);
 
@@ -200,6 +212,35 @@ export const findAll = (req, res) => {
 	Barangay.findAll({
 		attributes,
 		order: [["number", "ASC"]],
+	})
+		.then((data) => {
+			res.send(data);
+		})
+		.catch((err) => {
+			res.status(500).send({ message: err.message || "An error occured while retrieving data" });
+		});
+};
+
+export const findAllDocumentSettings = (req, res) => {
+	const attributes = ["barangay_id", "name", "number", "directory"];
+
+	Barangay.findAll({
+		attributes,
+		order: [["number", "ASC"]],
+		include: [
+			{
+				model: BarangayDocumentSetting,
+				as: "barangay_document_settings",
+				include: [
+					{
+						model: DocumentType,
+						as: "barangay_document_settings",
+						// attributes: [],
+						// required: true,
+					},
+				],
+			},
+		],
 	})
 		.then((data) => {
 			res.send(data);
