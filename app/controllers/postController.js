@@ -14,7 +14,6 @@ const Op = db.Sequelize.Op;
 
 import axios from "axios";
 import FormData from "form-data";
-// import { nanoid } from "nanoid";
 
 /* ========================================================================== */
 /*                               CREATE POST                                  */
@@ -23,7 +22,6 @@ export const create = async (req, res) => {
 	try {
 		const post = {
 			resident_account_id: req.session.user.resident_account_id,
-			// resident_account_id: req.body.resident_account_id,
 			post_type_id: req.body.post_type_id === "None" ? null : req.body.post_type_id,
 			barangay_id: req.body.barangay_id == "None" ? null : req.body.barangay_id,
 			title: capitalize(req.body.title?.trim() ?? "", true) || null,
@@ -424,32 +422,23 @@ export const findOne = async (req, res) => {
 };
 
 export const update = async (req, res) => {
-	const id = req.params.id;
+	const { post_id } = req.params;
 
-	const barangay = await Barangay.findByPk(id, { attributes: ["logo"] });
+	try {
+		const post = {
+			resident_account_id: req.session.user.resident_account_id,
+			post_type_id: req.body.post_type_id === "None" ? null : req.body.post_type_id,
+			barangay_id: req.body.barangay_id == "None" ? null : req.body.barangay_id,
+			title: capitalize(req.body.title?.trim() ?? "", true) || null,
+			content: req.body.content?.trim() || null,
+			// privacy: req.body.privacy || null,
+		};
+		const affectedRow = await Post.update(post, { where: { post_id } });
 
-	const data = { ...req.body };
-
-	let testing;
-
-	if (req.file) {
-		let form = new FormData();
-		form.append("image_file", req.file.buffer, {
-			filename: req.file.originalname.replace(/ /g, ""),
-			contentType: req.file.mimetype,
-			knownLength: req.file.size,
-		});
-		const { data: msg } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/barangaylogo/new`, form, {
-			headers: { ...form.getHeaders() },
-		});
-		testing = await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/barangaylogo/delete`, { params: { image_file: barangay.logo } });
-
-		data.logo = msg.image_url;
+		res.send({ message: "Data updated successfully!", affectedRow });
+	} catch (error) {
+		res.status(500).send({ message: `Could not upload data: ${error}` });
 	}
-
-	await Barangay.update(data, { where: { barangay_id: id } });
-
-	res.send({ message: "Data updated successfully!", data: testing?.data });
 };
 
 export const destroy = async (req, res) => {

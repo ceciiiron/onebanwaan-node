@@ -77,7 +77,7 @@ export const findEverything = (req, res) => {
 };
 
 export const findAllRequestsByBarangay = (req, res) => {
-	const { page = 0, size = 20, search } = req.query;
+	const { page = 0, size = 20, search, sortBy = "created_at", sortOrder = "DESC" } = req.query;
 	const { limit, offset } = getPagination(page, size);
 	const { barangay_id } = req.params;
 
@@ -87,13 +87,19 @@ export const findAllRequestsByBarangay = (req, res) => {
 			{
 				model: BarangayDocumentSetting,
 				as: "barangay_document_settings",
-				// attributes: [],
-				// required: true,
+				include: [
+					{
+						model: DocumentType,
+						as: "barangay_document_settings",
+						// attributes: [],
+						// required: true,
+					},
+				],
 			},
 		],
 		limit,
 		offset,
-		order: [["updated_at", "DESC"]],
+		order: [[sortBy, sortOrder]],
 	})
 		.then((data) => {
 			const response = formatPaginatedData(data, page, limit);

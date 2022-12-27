@@ -6,6 +6,7 @@ import {
 	findOne,
 	destroy,
 	heart,
+	update,
 	destoryHeart,
 } from "../controllers/postController.js";
 
@@ -33,6 +34,7 @@ export default (app) => {
 	});
 	// isResident
 	router.post("/", upload.array("image_files", 4), isResident, create);
+	router.put("/:post_id/update", isResident, update);
 	router.get("/paginated", findAllPaginated);
 	router.get("/private/paginated", isResident, findAllPrivatePaginated);
 	router.get("/barangay/paginated", findAllByBarangayPaginated);
