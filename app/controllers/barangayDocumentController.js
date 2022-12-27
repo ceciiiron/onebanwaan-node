@@ -77,12 +77,78 @@ export const findEverything = (req, res) => {
 };
 
 export const findAllRequestsByBarangay = (req, res) => {
-	const { page = 0, size = 20, search, sortBy = "created_at", sortOrder = "DESC" } = req.query;
+	const { page = 0, size = 20, search, request_status, document_type_id, payment_status, sortBy = "created_at", sortOrder = "DESC" } = req.query;
 	const { limit, offset } = getPagination(page, size);
 	const { barangay_id } = req.params;
+	const barangayDocumentCondition = {};
+	const documentTypeCondition = {};
+
+	Object.assign(barangayDocumentCondition, { barangay_id: barangay_id });
+
+	if (search) {
+		const searchCondition = {
+			[Op.or]: [{ full_name: { [Op.like]: `${search}%` } }, { ticket_code: { [Op.like]: `${search}%` } }, { email: { [Op.like]: `${search}%` } }],
+		};
+		Object.assign(barangayDocumentCondition, searchCondition);
+	}
+
+	if (document_type_id && document_type_id != "ALL") {
+		const condition = {
+			document_type_id: document_type_id,
+		};
+		Object.assign(documentTypeCondition, condition);
+	}
+
+	if (request_status && request_status != "ALL") {
+		const statusCondition = {
+			request_status: request_status,
+		};
+		Object.assign(barangayDocumentCondition, statusCondition);
+	}
+
+	if (payment_status && payment_status != "ALL") {
+		const statusCondition = {
+			payment_status: payment_status,
+		};
+		Object.assign(barangayDocumentCondition, statusCondition);
+	}
 
 	return BarangayDocumentRequest.findAndCountAll({
-		where: { barangay_id },
+		where: barangayDocumentCondition,
+		include: [
+			{
+				model: BarangayDocumentSetting,
+				as: "barangay_document_settings",
+				required: true,
+				include: [
+					{
+						model: DocumentType,
+						as: "barangay_document_settings",
+						required: true,
+						// attributes: [],
+						// required: true,
+						where: documentTypeCondition,
+					},
+				],
+			},
+		],
+		limit,
+		offset,
+		order: [[sortBy, sortOrder]],
+	})
+		.then((data) => {
+			const response = formatPaginatedData(data, page, limit);
+			res.send(response);
+		})
+		.catch((err) => {
+			res.status(500).send({ message: err.message, stack: err.stack });
+		});
+};
+
+export const findOne = async (req, res) => {
+	const { barangay_document_request_id } = req.params;
+
+	const data = await BarangayDocumentRequest.findByPk(barangay_document_request_id, {
 		include: [
 			{
 				model: BarangayDocumentSetting,
@@ -97,37 +163,37 @@ export const findAllRequestsByBarangay = (req, res) => {
 				],
 			},
 		],
-		limit,
-		offset,
-		order: [[sortBy, sortOrder]],
-	})
-		.then((data) => {
-			const response = formatPaginatedData(data, page, limit);
-			res.send(response);
-		})
-		.catch((err) => {
-			res.status(500).send({ message: err.message });
-		});
-};
-
-export const findOne = async (req, res) => {
-	const { barangay_id } = req.params;
-
-	const data = await BarangayHotline.findByPk(barangay_hotline_id);
+	});
 
 	return data ? res.send(data) : res.status(404).send({ message: `Hotline not found` });
 };
 
-export const update = async (req, res) => {
-	const { barangay_document_setting_id } = req.params;
+export const updatePaymentStatus = async (req, res) => {
+	const { barangay_document_request_id } = req.params;
 
 	try {
-		const barangayDocumentSetting = {
-			fee: req.body.fee,
-			other_requirements: req.body.other_requirements,
+		const barangayDocumentRequest = {
+			payment_status: req.body.payment_status,
 		};
 
-		await BarangayDocumentSetting.update(barangayDocumentSetting, { where: { barangay_document_setting_id } });
+		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
+
+		res.send({ message: "Data updated successfully!" });
+	} catch (error) {
+		//delete file
+		res.status(500).send({ message: `Could not upload data: ${error}` });
+	}
+};
+
+export const updateRequestStatus = async (req, res) => {
+	const { barangay_document_request_id } = req.params;
+
+	try {
+		const barangayDocumentRequest = {
+			request_status: req.body.request_status,
+		};
+
+		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {

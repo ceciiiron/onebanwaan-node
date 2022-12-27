@@ -58,7 +58,7 @@ export default (sequelize, DataTypes) => {
 			ticket_code: { type: DataTypes.STRING(500), allowNull: false },
 
 			request_status: { type: DataTypes.INTEGER, defaultValue: 1 }, //1pending, 2approved, 3issued, 4disapproved
-			payment_status: { type: DataTypes.INTEGER, defaultValue: 1 }, //1 unpaid, 2 paid, 3 FREE
+			payment_status: { type: DataTypes.INTEGER, defaultValue: 1 }, //1 pending,2 unpaid 3 paid 4 FREE
 			issued_at: { type: DataTypes.DATEONLY },
 		},
 		{
