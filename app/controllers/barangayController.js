@@ -261,11 +261,15 @@ export const findOne = async (req, res) => {
 				"barangay_id",
 				"lat",
 				"lng",
+				"vision",
+				"mission",
+				"goals",
 				"name",
 				"logo",
 				"cover_image_link",
 				"number",
 				"bio",
+				"pinned_post",
 				"address",
 				"directory",
 				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("Barangay.created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
@@ -288,14 +292,66 @@ export const findOne = async (req, res) => {
 				{
 					model: BarangayOfficial,
 					as: "officials",
-					// attributes: [],
-					// required: true,
 				},
 			],
 			order: [[{ model: BarangayOfficial, as: "officials" }, "hierarchy", "ASC"]],
 		});
 
-		return barangay ? res.send(barangay) : res.status(404).send({ message: `Not Found` });
+		let pinned_post = [];
+		if (barangay.pinned_post) {
+			console.log("HAS PINNED POST");
+			const as_barangay_admin = false;
+			const fields = [
+				"Posts.*",
+				"PT.name as post_type_name",
+				"RA.profile_image_link",
+				"RA.professional_title",
+				"RA.first_name",
+				"RA.middle_initial",
+				"RA.last_name",
+				"RA.suffix",
+				"RA.directory as resident_directory",
+				"B.barangay_id as resident_from_barangay_id",
+				"B.logo",
+				"B.name",
+				"B.number",
+				"B.directory as barangay_directory",
+				"HeartCounter.hearts_count",
+				"PI.post_images",
+			];
+
+			const bind = { post_id: barangay.pinned_post };
+
+			let isFavoriteQuery = "";
+			if (req.session.user?.resident_account_id) {
+				fields.push("(IsFavorite.post_heart_id IS NOT NULL) as is_favorite");
+				isFavoriteQuery = `LEFT JOIN (SELECT post_id, post_heart_id FROM PostHearts WHERE resident_account_id = $resident_account_id AND as_barangay_admin = $as_barangay_admin ) as IsFavorite ON IsFavorite.post_id = Posts.post_id`;
+				Object.assign(bind, {
+					resident_account_id: req.session.user.resident_account_id,
+					as_barangay_admin: as_barangay_admin,
+				});
+			}
+
+			const [results, metadata] = await db.sequelize.query(
+				`SELECT ${fields.join(",")}
+			FROM Posts 
+			INNER JOIN ResidentAccounts RA ON RA.resident_account_id = Posts.resident_account_id
+			INNER JOIN BarangayRoles BR ON BR.barangay_role_id = RA.barangay_role_id
+			INNER JOIN Barangays B ON B.barangay_id = BR.barangay_id
+			LEFT JOIN PostTypes PT ON PT.post_type_id = Posts.post_type_id
+			LEFT JOIN (SELECT GROUP_CONCAT(image_link SEPARATOR "|") as post_images, post_id FROM PostImages GROUP BY post_id ORDER BY post_image_id ASC) as PI ON PI.post_id = Posts.post_id
+			LEFT JOIN (SELECT COUNT(*) as hearts_count, post_id FROM PostHearts GROUP BY post_id) as HeartCounter ON HeartCounter.post_id = Posts.post_id
+			${isFavoriteQuery}
+			WHERE Posts.post_id = $post_id`,
+				{
+					bind: bind,
+				}
+			);
+
+			pinned_post = results;
+		}
+
+		return barangay ? res.status(200).send({ barangay, pinned_post }) : res.status(404).send({ message: `Not Found` });
 	} catch (error) {
 		res.status(500).send({ message: `An error occured while retrieving data: ${error} ${error.stack}` });
 	}
@@ -351,6 +407,30 @@ export const destroy = async (req, res) => {
 /* ========================================================================== */
 /*                              BARANGAY ACCOUNT                              */
 /* ========================================================================== */
+
+export const pinPost = async (req, res) => {
+	const { barangay_id } = req.params;
+
+	const updateBarangay = {
+		pinned_post: req.body.post_id,
+	};
+
+	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
+
+	res.send({ message: "Data updated successfully!", affectedRow });
+};
+
+export const unpinPost = async (req, res) => {
+	const { barangay_id } = req.params;
+
+	const updateBarangay = {
+		pinned_post: null,
+	};
+
+	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
+
+	res.send({ message: "Data updated successfully!", affectedRow });
+};
 
 export const updatePublicProfile = async (req, res) => {
 	const { barangay_id } = req.params;
@@ -433,6 +513,20 @@ export const updatePublicProfile = async (req, res) => {
 			console.log("IMAGEERROR", error, error.stack);
 		}
 	}
+
+	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
+
+	res.send({ message: "Data updated successfully!", affectedRow });
+};
+
+export const updateVisionMissionGoals = async (req, res) => {
+	const { barangay_id } = req.params;
+
+	const updateBarangay = {
+		vision: req.body.vision,
+		mission: req.body.mission,
+		goals: req.body.goals,
+	};
 
 	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
 

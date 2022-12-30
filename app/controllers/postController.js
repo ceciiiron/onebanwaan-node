@@ -125,7 +125,6 @@ const fields = [
 	"Posts.*",
 	"PT.name as post_type_name",
 	"RA.profile_image_link",
-	"RA.professional_title",
 	"RA.first_name",
 	"RA.middle_initial",
 	"RA.last_name",
@@ -150,7 +149,6 @@ export const findAllPaginated = async (req, res) => {
 		"Posts.*",
 		"PT.name as post_type_name",
 		"RA.profile_image_link",
-		"RA.professional_title",
 		"RA.first_name",
 		"RA.middle_initial",
 		"RA.last_name",
@@ -371,7 +369,6 @@ export const findOne = async (req, res) => {
 			"Posts.*",
 			"PT.name as post_type_name",
 			"RA.profile_image_link",
-			"RA.professional_title",
 			"RA.first_name",
 			"RA.middle_initial",
 			"RA.last_name",
@@ -470,7 +467,7 @@ export const destroy = async (req, res) => {
 		res.status(404).send({ message: "Not found" });
 	}
 
-	if (post.images.length > 0) {
+	if (post?.images.length > 0) {
 		try {
 			let form = new FormData();
 			let imageUrlsArray = [];

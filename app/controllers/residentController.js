@@ -6,7 +6,9 @@ import bcrypt from "bcryptjs";
 const Barangay = db.sequelize.models.Barangay;
 const BarangayRole = db.sequelize.models.BarangayRole;
 const ResidentAccount = db.sequelize.models.ResidentAccount;
-// const ResidentDetail = db.sequelize.models.ResidentDetail;
+const AccountVerification = db.sequelize.models.AccountVerification;
+// const ResidentAccountVerification = db.sequelize.models.ResidentAccountVerification;
+
 const Op = db.Sequelize.Op;
 
 import axios from "axios";
@@ -29,8 +31,6 @@ export const create = async (req, res) => {
 			// privacy: req.body.privacy,
 		};
 
-		console.log("AAAAA", residentAccount);
-
 		if (await ResidentAccount.findOne({ where: { email: residentAccount.email } })) {
 			return res.status(400).send({
 				error: {
@@ -44,6 +44,104 @@ export const create = async (req, res) => {
 		delete newResident.dataValues.password;
 
 		res.status(201).send(newResident);
+	} catch (error) {
+		res.status(500).send({ message: `Could not upload data: ${error}`, stack: error.stack });
+	}
+};
+
+export const checkEmail = async (req, res) => {
+	const { email } = req.query;
+
+	console.log("HOHO", email);
+	try {
+		if (await ResidentAccount.findOne({ where: { email: email } })) {
+			return res.status(400).send({
+				error: {
+					msg: "existing_resident_account",
+					param: "email",
+				},
+			});
+		}
+
+		res.status(200).send({ message: "account do not exist" });
+	} catch (error) {
+		res.status(500).send({ message: `Could not upload data: ${error}`, stack: error.stack });
+	}
+};
+
+export const createIndependent = async (req, res) => {
+	try {
+		// TODO: CHECK FIRST IF EMAIL IS TAKEN
+
+		let residentAccount = {
+			first_name: capitalize.words(req.body.first_name),
+			middle_initial: capitalize.words(req.body.middle_initial?.trim() ?? "", true) || null,
+			last_name: capitalize.words(req.body.last_name),
+			suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
+			email: req.body.email?.trim(),
+			password: bcrypt.hashSync(req.body.password.trim(), 8),
+			barangay_id: req.body.barangay_id,
+			directory: nanoid(16),
+			status: 0,
+		};
+
+		const role = await BarangayRole.findOne({
+			where: {
+				barangay_id: residentAccount.barangay_id,
+				name: "RESIDENT",
+			},
+			include: [
+				{
+					model: Barangay,
+					as: "barangay",
+				},
+			],
+		});
+		//Set role from selected barangay
+		residentAccount.barangay_role_id = role.barangay_role_id;
+
+		let verificationImages = "";
+
+		if (req.files.length > 0) {
+			console.log("MAY LAMAN YUNG FILES");
+			let form = new FormData();
+
+			req.files.forEach((file) => {
+				form.append("image_files[]", file.buffer, {
+					filename: file.originalname.replace(/ /g, ""),
+					contentType: file.mimetype,
+					knownLength: file.size,
+				});
+
+				console.log(file);
+			});
+
+			//FOR IMPROVEMENTS, do not create the derectory until verified;
+			form.append("directory", role.barangay.directory);
+			form.append("sub_directory", residentAccount.directory);
+
+			try {
+				const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/multipleimages`, form, {
+					headers: { ...form.getHeaders() },
+				});
+				//Under posts directory
+
+				let urls = message.image_urls;
+				verificationImages = `${urls[0].image_url}|${urls[0].image_url}`;
+			} catch (error) {
+				console.log(error);
+				res.status(500).send({ message: `Could not upload photos: ${error}`, stack: error.stack, error });
+			}
+		}
+
+		//insert account to database
+		const newAccount = await ResidentAccount.create(residentAccount);
+		const newAccountVerification = await AccountVerification.create({
+			resident_account_id: newAccount.resident_account_id,
+			verification_images: verificationImages,
+		});
+
+		res.status(201).send({ newAccount, newAccountVerification });
 	} catch (error) {
 		res.status(500).send({ message: `Could not upload data: ${error}`, stack: error.stack });
 	}
@@ -180,13 +278,11 @@ export const update = async (req, res) => {
 	const { resident_account_id } = req.params;
 
 	const updateResidentAccount = {
-		// professional_title: capitalize.words(req.body.professional_title?.trim() ?? "", true) || null,
 		first_name: capitalize.words(req.body.first_name),
 		middle_initial: capitalize.words(req.body.middle_initial?.trim() ?? "", true) || null,
 		last_name: capitalize.words(req.body.last_name),
 		suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
 		email: req.body.email?.trim(),
-		// privacy: req.body.privacy,
 		bio: req.body.bio?.trim() ?? null,
 	};
 

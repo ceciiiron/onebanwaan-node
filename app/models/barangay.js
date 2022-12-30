@@ -58,6 +58,9 @@ export default (sequelize, DataTypes) => {
 			},
 			name: { type: DataTypes.STRING, allowNull: false },
 			logo: { type: DataTypes.STRING(500) },
+			vision: { type: DataTypes.STRING(1000) },
+			mission: { type: DataTypes.STRING(1000) },
+			goals: { type: DataTypes.STRING(1000) },
 			cover_image_link: { type: DataTypes.STRING(500) },
 			number: { type: DataTypes.INTEGER, allowNull: false },
 			bio: { type: DataTypes.STRING },
@@ -65,6 +68,7 @@ export default (sequelize, DataTypes) => {
 			directory: { type: DataTypes.STRING, allowNull: false },
 			lat: { type: DataTypes.DOUBLE },
 			lng: { type: DataTypes.DOUBLE },
+			pinned_post: { type: DataTypes.INTEGER, allowNull: true },
 		},
 		{
 			sequelize,

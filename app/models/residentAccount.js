@@ -17,7 +17,6 @@ export default (sequelize, DataTypes) => {
 				autoIncrement: true,
 				primaryKey: true,
 			},
-			professional_title: { type: DataTypes.STRING, allowNull: true }, //Dr. Mr.
 			first_name: { type: DataTypes.STRING, allowNull: false },
 			middle_initial: { type: DataTypes.STRING, allowNull: true },
 			last_name: { type: DataTypes.STRING, allowNull: false },
@@ -25,7 +24,7 @@ export default (sequelize, DataTypes) => {
 			email: { type: DataTypes.STRING, allowNull: true },
 			password: { type: DataTypes.STRING, allowNull: true },
 			privacy: { type: DataTypes.BOOLEAN, defaultValue: false }, // 1 = public
-			status: { type: DataTypes.BOOLEAN, defaultValue: true }, //1 = activated
+			status: { type: DataTypes.INTEGER, defaultValue: 1 }, //1 = activated
 			profile_image_link: { type: DataTypes.STRING, allowNull: true },
 			cover_image_link: { type: DataTypes.STRING, allowNull: true },
 			directory: { type: DataTypes.STRING, allowNull: false },
