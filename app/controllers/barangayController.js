@@ -305,7 +305,6 @@ export const findOne = async (req, res) => {
 				"Posts.*",
 				"PT.name as post_type_name",
 				"RA.profile_image_link",
-				"RA.professional_title",
 				"RA.first_name",
 				"RA.middle_initial",
 				"RA.last_name",

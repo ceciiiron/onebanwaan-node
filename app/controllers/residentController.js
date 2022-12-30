@@ -254,18 +254,24 @@ export const findOne = async (req, res) => {
 
 	try {
 		const residentAccount = await ResidentAccount.findByPk(resident_account_id, {
-			include: {
-				model: BarangayRole,
-				attributes: ["barangay_role_id", "name"],
-				required: true,
-				as: "role",
-				include: [
-					{
-						model: Barangay,
-						as: "barangay",
-					},
-				],
-			},
+			include: [
+				{
+					model: BarangayRole,
+					attributes: ["barangay_role_id", "name"],
+					required: true,
+					as: "role",
+					include: [
+						{
+							model: Barangay,
+							as: "barangay",
+						},
+					],
+				},
+				{
+					model: AccountVerification,
+					as: "account_verification",
+				},
+			],
 		});
 
 		return residentAccount ? res.send(residentAccount) : res.status(404).send({ message: `Not Found` });
