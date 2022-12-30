@@ -429,7 +429,14 @@ export const updateAccountStatus = async (req, res) => {
 			where: { resident_account_id },
 		});
 
-		res.send({ message: "Account status updated successfully!", affectedRow: affectedRow });
+		const affectedRow2 = await AccountVerification.update(
+			{ remarks: req.body.remarks },
+			{
+				where: { resident_account_id },
+			}
+		);
+
+		res.send({ message: "Account status updated successfully!", affectedRow: affectedRow, affectedRow2 });
 	} catch (error) {
 		res.status(500).send({ message: "Error changing password", error: error, stack: error.stack });
 	}
