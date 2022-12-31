@@ -4,7 +4,9 @@ import {
 	create as createRequest,
 	findAllRequestsByBarangay,
 	findOne,
+	updateDocumentInformation,
 	updatePaymentStatus,
+	updatePersonalInformation,
 	updateRequestStatus,
 } from "../controllers/barangayDocumentController.js";
 import express from "express";
@@ -19,7 +21,8 @@ export default (app) => {
 	router.get("/:barangay_id/documentrequests/:barangay_document_request_id", findOne);
 	router.put("/:barangay_id/documentrequests/:barangay_document_request_id/paymentstatus", updatePaymentStatus);
 	router.put("/:barangay_id/documentrequests/:barangay_document_request_id/requeststatus", updateRequestStatus);
-
+	router.put("/:barangay_id/documentrequests/:barangay_document_request_id/personalinformation", updatePersonalInformation);
+	router.put("/:barangay_id/documentrequests/:barangay_document_request_id/documentinformation", updateDocumentInformation);
 	// router.get("/hotlines/everything", findEverything);
 	router.get("/:barangay_id/documentsettings", findAllByBarangay);
 	// router.get("/hotlines/", findAll);

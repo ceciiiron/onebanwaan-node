@@ -60,6 +60,8 @@ export default (sequelize, DataTypes) => {
 			request_status: { type: DataTypes.INTEGER, defaultValue: 1 }, //1pending, 2approved, 3issued, 4disapproved
 			payment_status: { type: DataTypes.INTEGER, defaultValue: 1 }, //1 pending,2 unpaid 3 paid 4 FREE
 			issued_at: { type: DataTypes.DATEONLY },
+			paid_at: { type: DataTypes.DATEONLY },
+			remarks: { type: DataTypes.STRING(500), allowNull: true },
 		},
 		{
 			sequelize,

@@ -172,9 +172,13 @@ export const updatePaymentStatus = async (req, res) => {
 	const { barangay_document_request_id } = req.params;
 
 	try {
-		const barangayDocumentRequest = {
+		let barangayDocumentRequest = {
 			payment_status: req.body.payment_status,
 		};
+
+		if (req.body.paid_at) {
+			barangayDocumentRequest.paid_at = req.body.paid_at;
+		}
 
 		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
 
@@ -189,8 +193,57 @@ export const updateRequestStatus = async (req, res) => {
 	const { barangay_document_request_id } = req.params;
 
 	try {
-		const barangayDocumentRequest = {
+		let barangayDocumentRequest = {
 			request_status: req.body.request_status,
+		};
+
+		if (req.body.remarks) {
+			barangayDocumentRequest.remarks = req.body.remarks;
+		}
+
+		if (req.body.issued_at) {
+			barangayDocumentRequest.issued_at = req.body.issued_at;
+		}
+
+		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
+
+		res.send({ message: "Data updated successfully!" });
+	} catch (error) {
+		//delete file
+		res.status(500).send({ message: `Could not upload data: ${error}` });
+	}
+};
+
+export const updatePersonalInformation = async (req, res) => {
+	const { barangay_document_request_id } = req.params;
+
+	try {
+		const barangayDocumentRequest = {
+			full_name: capitalize.words(req.body.full_name?.trim() ?? "", true) || null,
+			home_address: capitalize.words(req.body.home_address?.trim() ?? "", true) || null,
+			age: req.body.age,
+			birthdate: req.body.birthdate,
+			gender: req.body.gender,
+			civil_status: req.body.civil_status,
+			contact_number: req.body.contact_number ? req.body.contact_number?.trim() : null,
+		};
+
+		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
+
+		res.send({ message: "Data updated successfully!" });
+	} catch (error) {
+		//delete file
+		res.status(500).send({ message: `Could not upload data: ${error}` });
+	}
+};
+
+export const updateDocumentInformation = async (req, res) => {
+	const { barangay_document_request_id } = req.params;
+
+	try {
+		const barangayDocumentRequest = {
+			purpose: req.body.purpose,
+			captured_fee: req.body.captured_fee,
 		};
 
 		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
