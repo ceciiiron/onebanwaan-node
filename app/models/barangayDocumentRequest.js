@@ -11,7 +11,7 @@ export default (sequelize, DataTypes) => {
 			// Barangay 1:M Barangay Feedback
 			models.Barangay.hasMany(models.BarangayDocumentRequest, {
 				foreignKey: "barangay_id",
-				as: "barangay",
+				as: "barangay_document",
 				onDelete: "CASCADE",
 				onUpdate: "CASCADE",
 			});

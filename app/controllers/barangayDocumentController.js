@@ -2,7 +2,6 @@ import db from "../models/index.js";
 import capitalize from "capitalize";
 
 const Barangay = db.sequelize.models.Barangay;
-const BarangayHotline = db.sequelize.models.BarangayHotline;
 const BarangayDocumentRequest = db.sequelize.models.BarangayDocumentRequest;
 const BarangayDocumentSetting = db.sequelize.models.BarangayDocumentSetting;
 const DocumentType = db.sequelize.models.DocumentType;
@@ -52,32 +51,20 @@ const formatPaginatedData = (fetchedData, page, limit) => {
 	return { totalItems, data, totalPages, currentPage, rowPerPage: limit };
 };
 
-export const findEverything = (req, res) => {
-	return BarangayHotline.findAll({
-		attributes: [
-			"barangay_hotline_id",
-			"barangay_id",
-			"name",
-			"number",
-			// "created_at",
-			// "updated_at",
-			// [db.sequelize.fn("DATE_FORMAT", db.sequelize.col(`BarangayHotlines.updated_at`), "%m-%d-%Y %H:%i:%s"), "updated_at"],
-			// [db.Sequelize.literal("`Barangay`.`name`"), "barangay_name"],
-		],
-		include: { model: Barangay, attributes: ["name", "logo", "number"], required: true, as: "barangay" },
-		order: [["name", "ASC"]],
-	})
-		.then((data) => {
-			// const response = formatPaginatedData(data, page, limit);
-			res.send(data);
-		})
-		.catch((err) => {
-			res.status(500).send({ message: err.message || "An error occured while retrieving data" });
-		});
-};
-
 export const findAllRequestsByBarangay = (req, res) => {
-	const { page = 0, size = 20, search, request_status, document_type_id, payment_status, sortBy = "created_at", sortOrder = "DESC" } = req.query;
+	const {
+		page = 0,
+		size = 20,
+		search,
+		request_status,
+		document_type_id,
+		payment_status,
+		filter_date,
+		date_from,
+		date_to,
+		sortBy = "created_at",
+		sortOrder = "DESC",
+	} = req.query;
 	const { limit, offset } = getPagination(page, size);
 	const { barangay_id } = req.params;
 	const barangayDocumentCondition = {};
@@ -112,6 +99,12 @@ export const findAllRequestsByBarangay = (req, res) => {
 		};
 		Object.assign(barangayDocumentCondition, statusCondition);
 	}
+	//DATE FILTER
+	if (filter_date && filter_date != "ALL" && date_from && date_to) {
+		Object.assign(barangayDocumentCondition, {
+			[filter_date]: { [Op.between]: [date_from, date_to] },
+		});
+	}
 
 	return BarangayDocumentRequest.findAndCountAll({
 		where: barangayDocumentCondition,
@@ -125,8 +118,6 @@ export const findAllRequestsByBarangay = (req, res) => {
 						model: DocumentType,
 						as: "barangay_document_settings",
 						required: true,
-						// attributes: [],
-						// required: true,
 						where: documentTypeCondition,
 					},
 				],
@@ -253,4 +244,30 @@ export const updateDocumentInformation = async (req, res) => {
 		//delete file
 		res.status(500).send({ message: `Could not upload data: ${error}` });
 	}
+};
+
+// TICKET TRACKER
+
+export const tickettracker = async (req, res) => {
+	const { ticket_code } = req.params;
+
+	const data = await BarangayDocumentRequest.findOne({
+		where: { ticket_code },
+		include: [
+			{
+				model: BarangayDocumentSetting,
+				as: "barangay_document_settings",
+				include: [
+					{
+						model: DocumentType,
+						as: "barangay_document_settings",
+						// attributes: [],
+						// required: true,
+					},
+				],
+			},
+		],
+	});
+
+	return data ? res.send(data) : res.status(404).send({ message: `Request not found` });
 };
