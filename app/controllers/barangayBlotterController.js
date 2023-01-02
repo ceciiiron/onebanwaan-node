@@ -7,7 +7,7 @@ const Barangay = db.sequelize.models.Barangay;
 const BarangayDocumentRequest = db.sequelize.models.BarangayDocumentRequest;
 const BarangayDocumentSetting = db.sequelize.models.BarangayDocumentSetting;
 const BarangayBlotter = db.sequelize.models.BarangayBlotter;
-const DocumentType = db.sequelize.models.DocumentType;
+const BarangayCaseType = db.sequelize.models.BarangayCaseType;
 const Op = db.Sequelize.Op;
 
 export const create = async (req, res) => {
@@ -149,24 +149,33 @@ export const findAllBlotterByBarangay = (req, res) => {
 		});
 };
 
-export const findOne = async (req, res) => {
-	const { barangay_document_request_id } = req.params;
+export const findAllCaseTypes = async (req, res) => {
+	try {
+		const cases = await BarangayCaseType.findAll();
+		res.status(200).send({ cases });
+	} catch (error) {
+		res.status(500).send({ message: error.message });
+	}
+};
 
-	const data = await BarangayDocumentRequest.findByPk(barangay_document_request_id, {
-		include: [
-			{
-				model: BarangayDocumentSetting,
-				as: "barangay_document_settings",
-				include: [
-					{
-						model: DocumentType,
-						as: "barangay_document_settings",
-						// attributes: [],
-						// required: true,
-					},
-				],
-			},
-		],
+export const findOne = async (req, res) => {
+	const { barangay_blotter_id } = req.params;
+
+	const data = await BarangayBlotter.findByPk(barangay_blotter_id, {
+		// include: [
+		// 	{
+		// 		model: BarangayDocumentSetting,
+		// 		as: "barangay_document_settings",
+		// 		include: [
+		// 			{
+		// 				model: DocumentType,
+		// 				as: "barangay_document_settings",
+		// 				// attributes: [],
+		// 				// required: true,
+		// 			},
+		// 		],
+		// 	},
+		// ],
 	});
 
 	return data ? res.send(data) : res.status(404).send({ message: `Hotline not found` });

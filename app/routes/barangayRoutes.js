@@ -11,6 +11,7 @@ import {
 	updateLocation,
 	pinPost,
 	unpinPost,
+	updateCitizenCharter,
 } from "../controllers/barangayController.js";
 import express from "express";
 const router = express.Router();
@@ -69,6 +70,7 @@ export default (app) => {
 		]),
 		updatePublicProfile
 	);
+	router.put("/:barangay_id/citizencharter", upload.fields([{ name: "image_file", maxCount: 1 }]), updateCitizenCharter);
 	router.put("/:barangay_id/pinpost", pinPost);
 	router.put("/:barangay_id/unpinpost", unpinPost);
 	router.put("/:barangay_id/visionmissiongoals", updateVisionMissionGoals);

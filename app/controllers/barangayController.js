@@ -270,6 +270,7 @@ export const findOne = async (req, res) => {
 				"number",
 				"bio",
 				"pinned_post",
+				"citizen_charter",
 				"address",
 				"directory",
 				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("Barangay.created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
@@ -544,4 +545,49 @@ export const updateLocation = async (req, res) => {
 	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
 
 	res.send({ message: "Data updated successfully!", affectedRow });
+};
+
+export const updateCitizenCharter = async (req, res) => {
+	const { barangay_id } = req.params;
+
+	let updateBarangay = {};
+
+	const barangay = await Barangay.findByPk(barangay_id);
+
+	if (req.files["image_file"]?.[0]) {
+		let form = new FormData();
+		form.append("image_file", req.files["image_file"][0].buffer, {
+			filename: req.files["image_file"][0].originalname.replace(/ /g, ""),
+			contentType: req.files["image_file"][0].mimetype,
+			knownLength: req.files["image_file"][0].size,
+		});
+
+		form.append("image_type", "barangay_citizen_charter");
+		form.append("directory", barangay.directory);
+
+		const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/singleimage`, form, {
+			headers: { ...form.getHeaders() },
+		});
+
+		if (barangay.citizen_charter) {
+			const imageUrlsArray = [barangay.citizen_charter];
+			let params = "?";
+			for (let imageUrlIndex in imageUrlsArray) {
+				params += `image_files[]=${imageUrlsArray[imageUrlIndex]}`;
+			}
+			params += "&image_type=barangay_citizen_charter";
+			params += "&directory=" + barangay.directory;
+			// params += "&sub_directory=" + barangay.directory;
+
+			const { data: deleteImageMessage } = await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/delete` + params, {
+				headers: { ...form.getHeaders() },
+			});
+		}
+
+		updateBarangay.citizen_charter = message.image_name;
+	}
+
+	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
+
+	res.send({ message: "Data updated successfully!", affectedRow, citizen_charter: updateBarangay.citizen_charter });
 };
