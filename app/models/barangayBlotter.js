@@ -56,7 +56,7 @@ export default (sequelize, DataTypes) => {
 
 			narrative: { type: DataTypes.STRING(3000), allowNull: true },
 			status: { type: DataTypes.INTEGER, defaultValue: 1 },
-			remarks: { type: DataTypes.STRING(500), allowNull: true },
+			remarks: { type: DataTypes.STRING(500), allowNull: true }, //1pending, 2verified 3falsereport
 		},
 		{
 			sequelize,

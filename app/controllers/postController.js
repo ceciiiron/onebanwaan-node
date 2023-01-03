@@ -140,8 +140,21 @@ const fields = [
 	"PI.post_images",
 ];
 
+// HOMEPAGE FETCH POST
 export const findAllPaginated = async (req, res) => {
-	const { page = 0, size = 10, search, sortBy = "created_at", sortOrder = "DESC", resident_account_id, likedPosts = false, specific = false } = req.query;
+	const {
+		page = 0,
+		size = 10,
+		search,
+		sortBy = "created_at",
+		date_from = null,
+		date_to = null,
+		post_type_id,
+		sortOrder = "DESC",
+		resident_account_id,
+		likedPosts = false,
+		specific = false,
+	} = req.query;
 	const { limit, offset } = getPagination(page, size);
 	const bind = { limit: limit, offset: offset };
 
@@ -221,6 +234,8 @@ export const findAllPaginated = async (req, res) => {
 				? "AND LikedPosts.resident_account_id = $resident_account_id"
 				: ""
 		}
+		${date_from && date_to ? ` AND DATE(Posts.created_at) BETWEEN ${date_from} AND ${date_to} ` : ""}
+		${post_type_id !== "ALL" ? ` AND Posts.post_type_id = ${post_type_id}  ` : ""}
 		${orderByQuery} LIMIT $limit OFFSET $offset;`,
 		{
 			bind: bind,
@@ -544,5 +559,41 @@ export const destoryHeart = async (req, res) => {
 		res.status(200).send({ rows });
 	} catch (error) {
 		res.status(400).send({ message: `Could not unfavorite post: ${error}`, stack: error.stack });
+	}
+};
+
+export const likes = async (req, res) => {
+	const post_id = req.params.post_id;
+
+	try {
+		const rows = await PostHeart.findAll({
+			where: {
+				post_id: post_id,
+			},
+			include: {
+				model: ResidentAccount,
+				as: "resident_heart",
+				include: [
+					{
+						model: BarangayRole,
+						required: true,
+						as: "role",
+						attributes: ["barangay_role_id", "name"],
+						include: [
+							{
+								model: Barangay,
+								required: true,
+								as: "barangay",
+								attributes: ["barangay_id", "name", "logo", "number", "directory"],
+							},
+						],
+					},
+				],
+			},
+		});
+
+		res.status(200).send({ rows });
+	} catch (error) {
+		res.status(404).send({ message: `Not found: ${error}`, stack: error.stack });
 	}
 };

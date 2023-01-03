@@ -26,7 +26,7 @@ export default (app) => {
 	router.post("/registration", upload.array("image_files", 2), createIndependent);
 
 	router.get("/checkemail", checkEmail);
-	router.get("/", isResident, findAll);
+	router.get("/", findAll); //isResident
 	//CHANGE PASSWORD
 	router.put("/:resident_account_id/current/changepassword", [isResident], currentChangePassword);
 	router.put("/:resident_account_id/changepassword", [isResident], changePassword);

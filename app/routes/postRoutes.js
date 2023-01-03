@@ -8,6 +8,7 @@ import {
 	heart,
 	update,
 	destoryHeart,
+	likes,
 } from "../controllers/postController.js";
 
 import { findAllCommentsByPost, findOneComment, createComment, updateComment, destroyComment } from "../controllers/postCommentController.js";
@@ -42,6 +43,7 @@ export default (app) => {
 	/* ============================== HEART ROUTES ============================== */
 	router.post("/:post_id/heart", isResident, heart);
 	router.delete("/:post_id/heart", isResident, destoryHeart);
+	router.get("/:post_id/likes", likes);
 	/* ========================================================================== */
 
 	/* ============================== COMMENT ROUTES ============================== */
@@ -54,5 +56,6 @@ export default (app) => {
 
 	router.get("/:post_id", findOne);
 	router.delete("/:post_id", destroy);
+
 	app.use("/api/posts", router);
 };

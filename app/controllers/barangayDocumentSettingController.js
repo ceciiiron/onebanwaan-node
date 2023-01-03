@@ -90,7 +90,7 @@ export const findAll = (req, res) => {
 };
 
 export const findAllByBarangay = (req, res) => {
-	const { page, size, name, number } = req.query;
+	const { page, size = 10, name, number } = req.query;
 	const { limit, offset } = getPagination(page, size);
 	const { barangay_id } = req.params;
 

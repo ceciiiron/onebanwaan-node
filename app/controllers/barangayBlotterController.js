@@ -77,7 +77,18 @@ const formatPaginatedData = (fetchedData, page, limit) => {
 };
 
 export const findAllBlotterByBarangay = (req, res) => {
-	const { page = 0, size = 20, search, filter_date, date_from, date_to, sortBy = "created_at", sortOrder = "DESC" } = req.query;
+	const {
+		page = 0,
+		size = 20,
+		search,
+		filter_date,
+		date_from,
+		date_to,
+		barangay_case_type_id,
+		status,
+		sortBy = "created_at",
+		sortOrder = "DESC",
+	} = req.query;
 	const { limit, offset } = getPagination(page, size);
 	const { barangay_id } = req.params;
 	const barangayBlotterCondition = {};
@@ -87,31 +98,37 @@ export const findAllBlotterByBarangay = (req, res) => {
 
 	if (search) {
 		const searchCondition = {
-			[Op.or]: [{ complainants: { [Op.like]: `%${search}%` } }, { complainants: { [Op.like]: `%${search}%` } }, { email: { [Op.like]: `${search}%` } }],
+			[Op.or]: [
+				{ complainants: { [Op.like]: `%${search}%` } },
+				{ respondents: { [Op.like]: `%${search}%` } },
+				{ email: { [Op.like]: `${search}%` } },
+				{ contact_number: { [Op.like]: `${search}%` } },
+			],
 		};
 		Object.assign(barangayBlotterCondition, searchCondition);
 	}
 
-	// if (document_type_id && document_type_id != "ALL") {
-	// 	const condition = {
-	// 		document_type_id: document_type_id,
-	// 	};
-	// 	Object.assign(documentTypeCondition, condition);
-	// }
+	if (barangay_case_type_id && barangay_case_type_id != "ALL") {
+		let barangayCaseTypeCondition = "";
+		if (barangay_case_type_id != "UNLABELED") {
+			barangayCaseTypeCondition = {
+				barangay_case_type_id: barangay_case_type_id,
+			};
+			Object.assign(barangayBlotterCondition, barangayCaseTypeCondition);
+		} else if (barangay_case_type_id === "UNLABELED") {
+			barangayCaseTypeCondition = {
+				barangay_case_type_id: { [Op.is]: null },
+			};
+			Object.assign(barangayBlotterCondition, barangayCaseTypeCondition);
+		}
+	}
 
-	// if (request_status && request_status != "ALL") {
-	// 	const statusCondition = {
-	// 		request_status: request_status,
-	// 	};
-	// 	Object.assign(barangayBlotterCondition, statusCondition);
-	// }
-
-	// if (payment_status && payment_status != "ALL") {
-	// 	const statusCondition = {
-	// 		payment_status: payment_status,
-	// 	};
-	// 	Object.assign(barangayBlotterCondition, statusCondition);
-	// }
+	if (status && status != "ALL") {
+		const statusCondition = {
+			status: status,
+		};
+		Object.assign(barangayBlotterCondition, statusCondition);
+	}
 	//DATE FILTER
 	if (filter_date && filter_date != "ALL" && date_from && date_to) {
 		Object.assign(barangayBlotterCondition, {
@@ -179,4 +196,42 @@ export const findOne = async (req, res) => {
 	});
 
 	return data ? res.send(data) : res.status(404).send({ message: `Hotline not found` });
+};
+
+export const updateStatus = async (req, res) => {
+	const { barangay_blotter_id } = req.params;
+
+	try {
+		let barangayBlotter = {
+			status: req.body.status,
+		};
+
+		if (req.body.remarks) {
+			barangayBlotter.remarks = req.body.remarks;
+		}
+
+		await BarangayBlotter.update(barangayBlotter, { where: { barangay_blotter_id } });
+
+		res.send({ message: "Data updated successfully!" });
+	} catch (error) {
+		//delete file
+		res.status(500).send({ message: `Could not upload data: ${error}` });
+	}
+};
+
+export const updateCaseType = async (req, res) => {
+	const { barangay_blotter_id } = req.params;
+
+	try {
+		let barangayBlotter = {
+			barangay_case_type_id: req.body.barangay_case_type_id === "UNLABELED" ? null : req.body.barangay_case_type_id,
+		};
+
+		await BarangayBlotter.update(barangayBlotter, { where: { barangay_blotter_id } });
+
+		res.send({ message: "Data updated successfully!" });
+	} catch (error) {
+		//delete file
+		res.status(500).send({ message: `Could not upload data: ${error}` });
+	}
 };
