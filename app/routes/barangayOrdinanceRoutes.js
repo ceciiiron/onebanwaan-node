@@ -1,4 +1,4 @@
-import { create, findAllByBarangay, findOne, update } from "../controllers/barangayOrdinanceController.js";
+import { create, findAllByBarangay, findOne, update, destroy } from "../controllers/barangayOrdinanceController.js";
 import express from "express";
 const router = express.Router();
 
@@ -13,6 +13,7 @@ export default (app) => {
 	router.put("/:barangay_id/ordinances/:barangay_ordinance_id", upload.single("image_file"), update);
 	router.get("/:barangay_id/ordinances", findAllByBarangay);
 	router.get("/:barangay_id/ordinances/:barangay_ordinance_id", findOne);
+	router.delete("/:barangay_id/ordinances/:barangay_ordinance_id", destroy);
 
 	app.use("/api/barangays", router);
 };

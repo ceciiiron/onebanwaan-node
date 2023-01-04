@@ -10,6 +10,7 @@ const Post = db.sequelize.models.Post;
 const PostImage = db.sequelize.models.PostImage;
 const PostHeart = db.sequelize.models.PostHeart;
 const PostComment = db.sequelize.models.PostComment;
+const AuditLog = db.sequelize.models.AuditLog;
 const Op = db.Sequelize.Op;
 
 import axios from "axios";
@@ -29,9 +30,6 @@ export const create = async (req, res) => {
 			privacy: req.body.privacy || null,
 			as_barangay_admin: req.body.as_barangay_admin || false,
 		};
-
-		console.log("POST DATA (❁´◡`❁)", req.body);
-		console.log("IMAGE FILES", req.files);
 
 		const residentAccount = await ResidentAccount.findByPk(post.resident_account_id, {
 			attributes: [
@@ -56,6 +54,13 @@ export const create = async (req, res) => {
 		});
 
 		const newPost = await Post.create(post);
+
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "BARANGAY POSTS",
+			action: "CREATE",
+			description: `Created ${post.title}`,
+		});
 
 		if (req.files.length > 0) {
 			console.log("MAY LAMAN YUNG FILES");
@@ -445,7 +450,17 @@ export const update = async (req, res) => {
 			content: req.body.content?.trim() || null,
 			// privacy: req.body.privacy || null,
 		};
+
+		const currentPost = await Post.findByPk(post_id);
+
 		const affectedRow = await Post.update(post, { where: { post_id } });
+
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "BARANGAY POSTS",
+			action: "UPDATE",
+			description: `Updated ${currentPost.title}`,
+		});
 
 		res.send({ message: "Data updated successfully!", affectedRow });
 	} catch (error) {
@@ -511,6 +526,13 @@ export const destroy = async (req, res) => {
 	try {
 		const data = await Post.destroy({
 			where: { post_id },
+		});
+
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "BARANGAY POSTS",
+			action: "DELETE",
+			description: `Deleted ${post.title}`,
 		});
 		res.send({ message: "Data deleted successfully!", data });
 	} catch (error) {

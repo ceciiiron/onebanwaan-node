@@ -5,6 +5,7 @@ const BarangayRole = db.sequelize.models.BarangayRole;
 const BarangayPermission = db.sequelize.models.BarangayPermission;
 const BarangayRolePermission = db.sequelize.models.BarangayRolePermission;
 const ResidentAccount = db.sequelize.models.ResidentAccount;
+const AuditLog = db.sequelize.models.AuditLog;
 const Op = db.Sequelize.Op;
 
 export const create = async (req, res) => {
@@ -25,7 +26,12 @@ export const create = async (req, res) => {
 
 		const results = BarangayRolePermission.bulkCreate(rolePermissions);
 
-		console.log(rolePermissions);
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "ACCOUNT ROLES",
+			action: "CREATE",
+			description: `Created ${barangayRole.name}`,
+		});
 
 		res.status(201).send({ rolePermissions, results });
 	} catch (error) {
@@ -157,7 +163,12 @@ export const update = async (req, res) => {
 
 		const results = BarangayRolePermission.bulkCreate(rolePermissions);
 
-		// console.log(rolePermissions);
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "ACCOUNT ROLES",
+			action: "UPDATE",
+			description: `Updated ${barangayRole.name}`,
+		});
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {
@@ -180,6 +191,15 @@ export const destroy = async (req, res) => {
 			},
 		});
 	}
+
+	const brole = await BarangayRole.findByPk(barangay_role_id);
+
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "ACCOUNT ROLES",
+		action: "DELETE",
+		description: `Deleted ${brole.name}`,
+	});
 
 	await BarangayRole.destroy({
 		where: { barangay_role_id },

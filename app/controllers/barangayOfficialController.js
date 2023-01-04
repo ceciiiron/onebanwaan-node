@@ -5,6 +5,7 @@ const Barangay = db.sequelize.models.Barangay;
 const BarangayHotline = db.sequelize.models.BarangayHotline;
 const BarangayOfficial = db.sequelize.models.BarangayOfficial;
 const ResidentAccount = db.sequelize.models.ResidentAccount;
+const AuditLog = db.sequelize.models.AuditLog;
 const Op = db.Sequelize.Op;
 
 export const create = async (req, res) => {
@@ -21,11 +22,12 @@ export const create = async (req, res) => {
 			email: req.body.email ? req.body.email.trim() : null,
 		};
 
-		if (req.body.resident_account_email) {
-			//connect to OB Account
-			// Find email
-			//2 error: email not found and email is already conected
-		}
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "BARANGAY OFFICIALS",
+			action: "CREATE",
+			description: `Created ${barangayOfficial.display_name}`,
+		});
 
 		const data = await BarangayOfficial.create(barangayOfficial);
 
@@ -149,6 +151,13 @@ export const update = async (req, res) => {
 	};
 
 	const affectedRow = await BarangayOfficial.update(data, { where: { barangay_official_id } });
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "BARANGAY OFFICIALS",
+		action: "UPDATE",
+		description: `Updated ${data.display_name}`,
+	});
+
 	if (!affectedRow) res.status(404).send({ message: `Not Found` });
 	res.send({ message: "Data updated successfully!" });
 };
@@ -156,7 +165,16 @@ export const update = async (req, res) => {
 export const destroy = async (req, res) => {
 	const barangay_official_id = req.params.barangay_official_id;
 
+	const official = await BarangayOfficial.findByPk(barangay_official_id);
+
 	const affectedRow = await BarangayOfficial.destroy({ where: { barangay_official_id } });
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "BARANGAY OFFICIALS",
+		action: "DELETE",
+		description: `Deleted ${official.display_name}`,
+	});
+
 	if (!affectedRow) res.status(404).send({ message: `Not Found` });
 	res.status(200).send({ message: "Data deleted successfully" });
 };

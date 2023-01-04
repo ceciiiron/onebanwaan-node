@@ -7,6 +7,7 @@ const Barangay = db.sequelize.models.Barangay;
 const BarangayHotline = db.sequelize.models.BarangayHotline;
 const BarangayOfficial = db.sequelize.models.BarangayOfficial;
 const ResidentAccount = db.sequelize.models.ResidentAccount;
+const AuditLog = db.sequelize.models.AuditLog;
 const BarangayOrdinance = db.sequelize.models.BarangayOrdinance;
 const Op = db.Sequelize.Op;
 
@@ -39,6 +40,13 @@ export const create = async (req, res) => {
 
 			newOrdinance.ordinance_link = message.image_name;
 		}
+
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "BARANGAY ORDINANCES",
+			action: "CREATE",
+			description: `Created ${newOrdinance.title}`,
+		});
 
 		const newData = await BarangayOrdinance.create(newOrdinance);
 
@@ -129,7 +137,12 @@ export const update = async (req, res) => {
 		}
 
 		const affectedRow = await BarangayOrdinance.update(updateOrdinance, { where: { barangay_ordinance_id } });
-
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "BARANGAY ORDINANCES",
+			action: "UPDATE",
+			description: `Updated ${updateOrdinance.title}`,
+		});
 		res.status(201).send({ affectedRow, updateOrdinance });
 	} catch (error) {
 		res.status(500).send({ message: `Could not insert data: ${error}` });
@@ -137,9 +150,18 @@ export const update = async (req, res) => {
 };
 
 export const destroy = async (req, res) => {
-	const barangay_official_id = req.params.barangay_official_id;
+	const { barangay_ordinance_id } = req.params;
 
-	const affectedRow = await BarangayOfficial.destroy({ where: { barangay_official_id } });
+	const affectedRow = await BarangayOrdinance.destroy({ where: { barangay_ordinance_id } });
+
+	//Delete the file
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "BARANGAY ORDINANCES",
+		action: "DELETE",
+		description: `Deleted a barangay ordinance`,
+	});
+
 	if (!affectedRow) res.status(404).send({ message: `Not Found` });
 	res.status(200).send({ message: "Data deleted successfully" });
 };

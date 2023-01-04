@@ -10,6 +10,8 @@ const BarangayDocumentSetting = db.sequelize.models.BarangayDocumentSetting;
 const DocumentType = db.sequelize.models.DocumentType;
 const BarangayOfficial = db.sequelize.models.BarangayOfficial;
 const ResidentAccount = db.sequelize.models.ResidentAccount;
+const Post = db.sequelize.models.Post;
+const AuditLog = db.sequelize.models.AuditLog;
 const Op = db.Sequelize.Op;
 
 import axios from "axios";
@@ -415,7 +417,16 @@ export const pinPost = async (req, res) => {
 		pinned_post: req.body.post_id,
 	};
 
+	const selectedPost = await Post.findByPk(req.body.post_id);
+
 	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
+
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "BARANGAY PROFILE",
+		action: "UPDATE",
+		description: `Pinned Post ${selectedPost.title}`,
+	});
 
 	res.send({ message: "Data updated successfully!", affectedRow });
 };
@@ -426,6 +437,13 @@ export const unpinPost = async (req, res) => {
 	const updateBarangay = {
 		pinned_post: null,
 	};
+
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "BARANGAY PROFILE",
+		action: "UPDATE",
+		description: `Unpinned Post`,
+	});
 
 	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
 
@@ -516,6 +534,13 @@ export const updatePublicProfile = async (req, res) => {
 
 	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
 
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "BARANGAY PROFILE",
+		action: "UPDATE",
+		description: `Updated barangay public profile`,
+	});
+
 	res.send({ message: "Data updated successfully!", affectedRow });
 };
 
@@ -530,6 +555,13 @@ export const updateVisionMissionGoals = async (req, res) => {
 
 	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
 
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "BARANGAY PROFILE",
+		action: "UPDATE",
+		description: `Updated Vision, Mission, Goals`,
+	});
+
 	res.send({ message: "Data updated successfully!", affectedRow });
 };
 
@@ -543,6 +575,13 @@ export const updateLocation = async (req, res) => {
 	};
 
 	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
+
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "BARANGAY PROFILE",
+		action: "UPDATE",
+		description: `Updated barangay location`,
+	});
 
 	res.send({ message: "Data updated successfully!", affectedRow });
 };
@@ -588,6 +627,13 @@ export const updateCitizenCharter = async (req, res) => {
 	}
 
 	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
+
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "BARANGAY CITIZEN'S CHARTER",
+		action: "UPDATED",
+		description: `Updated Citizen's Charter`,
+	});
 
 	res.send({ message: "Data updated successfully!", affectedRow, citizen_charter: updateBarangay.citizen_charter });
 };

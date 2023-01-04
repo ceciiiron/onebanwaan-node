@@ -4,6 +4,7 @@ const Barangay = db.sequelize.models.Barangay;
 const BarangayHotline = db.sequelize.models.BarangayHotline;
 const BarangayDocumentSetting = db.sequelize.models.BarangayDocumentSetting;
 const DocumentType = db.sequelize.models.DocumentType;
+const AuditLog = db.sequelize.models.AuditLog;
 const Op = db.Sequelize.Op;
 
 const getPagination = (page, size) => {
@@ -136,6 +137,13 @@ export const update = async (req, res) => {
 		};
 
 		await BarangayDocumentSetting.update(barangayDocumentSetting, { where: { barangay_document_setting_id } });
+
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "DOCUMENT SETTINGS",
+			action: "UPDATE",
+			description: `Updated Document Setting`,
+		});
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {

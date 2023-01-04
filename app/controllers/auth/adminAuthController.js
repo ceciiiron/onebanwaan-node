@@ -23,6 +23,7 @@ export function login(req, res) {
 				suffix: admin.dataValues.suffix,
 				profile_image_link: admin.dataValues.profile_image_link,
 				email: admin.dataValues.email,
+				role: admin.dataValues.role,
 				isLoggedIn: true,
 				loginTime: dayjs().format("ddd, MMM D, YYYY h:mm A"),
 			};
@@ -56,6 +57,7 @@ export async function getAccountFromSession(req, res) {
 			"middle_initial",
 			"last_name",
 			"suffix",
+			"role",
 			"email",
 			"contact_number",
 			"profile_image_link",

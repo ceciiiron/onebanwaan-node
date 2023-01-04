@@ -2,6 +2,7 @@ import db from "../models/index.js";
 
 const Barangay = db.sequelize.models.Barangay;
 const BarangayHotline = db.sequelize.models.BarangayHotline;
+const AuditLog = db.sequelize.models.AuditLog;
 const Op = db.Sequelize.Op;
 
 export const create = async (req, res) => {
@@ -12,6 +13,13 @@ export const create = async (req, res) => {
 			barangay_id,
 			name: req.body.name,
 			number: req.body.number,
+		});
+
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "BARANGAY HOTLINES",
+			action: "CREATE",
+			description: `Created ${data.name} hotline`,
 		});
 
 		res.send(data);
@@ -151,7 +159,14 @@ export const update = async (req, res) => {
 	//TODO: check session if he/she is a barangay admin.
 
 	const affectedRow = await BarangayHotline.update(data, { where: { barangay_hotline_id } });
-	console.log(affectedRow);
+
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "BARANGAY HOTLINES",
+		action: "UPDATE",
+		description: `Updated ${data?.name} hotline`,
+	});
+
 	if (!affectedRow) res.status(404).send({ message: `Not Found` });
 	res.send({ message: "Data updated successfully!" });
 };
@@ -160,6 +175,12 @@ export const destroy = async (req, res) => {
 	const barangay_hotline_id = req.params.barangay_hotline_id;
 
 	const affectedRow = await BarangayHotline.destroy({ where: { barangay_hotline_id } });
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "BARANGAY HOTLINES",
+		action: "DELETE",
+		description: `Deleted hotline`,
+	});
 	if (!affectedRow) res.status(404).send({ message: `Not Found` });
 	res.send({ message: "Data deleted successfully" });
 };

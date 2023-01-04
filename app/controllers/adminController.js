@@ -24,6 +24,7 @@ export async function create(req, res) {
 			suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
 			contact_number: req.body.contact_number?.trim(),
 			email: req.body.email,
+			role: req.body.role,
 			password: bcrypt.hashSync(req.body.password.trim(), 8),
 		};
 
@@ -106,6 +107,7 @@ export const findAllPaginated = (req, res) => {
 				"full_name",
 			],
 			"email",
+			"role",
 			"profile_image_link",
 			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
 			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("updated_at"), "%m-%d-%Y %H:%i:%s"), "updated_at"],
@@ -149,6 +151,7 @@ export function findOne(req, res) {
 			"last_name",
 			"suffix",
 			"email",
+			"role",
 			"contact_number",
 			"profile_image_link",
 			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
@@ -180,6 +183,7 @@ export async function update(req, res) {
 			suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
 			contact_number: req.body.contact_number?.trim(),
 			email: req.body.email,
+			role: req.body.role,
 		};
 
 		if (req.file) {

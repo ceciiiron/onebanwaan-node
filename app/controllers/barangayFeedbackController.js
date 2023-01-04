@@ -3,6 +3,7 @@ import db from "../models/index.js";
 import capitalize from "capitalize";
 
 const Barangay = db.sequelize.models.Barangay;
+const BarangayRole = db.sequelize.models.BarangayRole;
 const BarangayFeedback = db.sequelize.models.BarangayFeedback;
 const ResidentAccount = db.sequelize.models.ResidentAccount;
 const Op = db.Sequelize.Op;
@@ -46,6 +47,7 @@ const formatPaginatedData = (fetchedData, page, limit) => {
 	return { totalItems, data, totalPages, currentPage, rowPerPage: limit };
 };
 
+//Not working
 export const findAll = (req, res) => {
 	let { page = 0, size = 10, search, sortBy = "updated_at", sortOrder = "DESC", barangay_id, barangay_role_id, status } = req.query;
 	const { limit, offset } = getPagination(page, size);
@@ -167,158 +169,87 @@ export const findOne = async (req, res) => {
 	}
 };
 
-export const update = async (req, res) => {
-	const { resident_account_id } = req.params;
+export const findAllFeedbackByBarangay = (req, res) => {
+	const { page = 0, size = 20, search, rating, filter_date, date_from, date_to, sortBy = "created_at", sortOrder = "DESC" } = req.query;
+	const { limit, offset } = getPagination(page, size);
+	const { barangay_id } = req.params;
+	const barangayDocumentCondition = {};
 
-	const updateResidentAccount = {
-		professional_title: capitalize.words(req.body.professional_title?.trim() ?? "", true) || null,
-		first_name: capitalize.words(req.body.first_name),
-		middle_initial: capitalize.words(req.body.middle_initial?.trim() ?? "", true) || null,
-		last_name: capitalize.words(req.body.last_name),
-		suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
-		email: req.body.email?.trim(),
-		bio: req.body.bio?.trim() ?? null,
-	};
+	Object.assign(barangayDocumentCondition, { barangay_id: barangay_id });
 
-	//Check if email exists;
-	if (await ResidentAccount.findOne({ where: { email: updateResidentAccount.email, [Op.not]: { resident_account_id: resident_account_id } } })) {
-		return res.status(400).send({
-			error: {
-				msg: "existing_resident_account",
-				param: "email",
-			},
+	let searchCondition = {};
+	if (search) {
+		searchCondition = {
+			[Op.or]: [{ first_name: { [Op.like]: `%${search}%` } }],
+		};
+		// Object.assign(barangayDocumentCondition, searchCondition);
+	}
+
+	if (rating && rating != "ALL") {
+		const statusCondition = {
+			rating: rating,
+		};
+		Object.assign(barangayDocumentCondition, statusCondition);
+	}
+
+	//DATE FILTER
+	if (filter_date && filter_date != "ALL" && date_from && date_to) {
+		Object.assign(barangayDocumentCondition, {
+			[filter_date]: { [Op.between]: [date_from, date_to] },
 		});
 	}
 
-	const residentAccount = await ResidentAccount.findByPk(resident_account_id, {
+	return BarangayFeedback.findAndCountAll({
+		where: barangayDocumentCondition,
 		include: {
-			model: BarangayRole,
-			attributes: ["barangay_role_id", "name"],
-			required: true,
-			as: "role",
+			model: ResidentAccount,
+			as: "resident_account",
+			where: searchCondition,
+			attributes: [
+				"resident_account_id",
+				"profile_image_link",
+				"status",
+				"directory",
+				[
+					db.sequelize.fn(
+						"CONCAT_WS",
+						"|",
+						db.sequelize.col("first_name"),
+						db.sequelize.col("middle_initial"),
+						db.sequelize.col("last_name"),
+						db.sequelize.col("suffix")
+					),
+					"full_name",
+				],
+				"email",
+			],
 			include: [
 				{
-					model: Barangay,
-					as: "barangay",
+					model: BarangayRole,
+					required: true,
+					as: "role",
+					attributes: ["barangay_role_id", "name"],
+					include: [
+						{
+							model: Barangay,
+							required: true,
+							as: "barangay",
+							attributes: ["barangay_id", "name", "logo", "number", "directory"],
+							// where: barangayCondition,
+						},
+					],
 				},
 			],
 		},
-	});
-
-	if (req.files["image_file"]?.[0]) {
-		let form = new FormData();
-		form.append("image_file", req.files["image_file"][0].buffer, {
-			filename: req.files["image_file"][0].originalname.replace(/ /g, ""),
-			contentType: req.files["image_file"][0].mimetype,
-			knownLength: req.files["image_file"][0].size,
-		});
-
-		form.append("image_type", "resident_profile");
-		form.append("directory", residentAccount.role.barangay.directory);
-		form.append("sub_directory", residentAccount.directory);
-
-		const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/singleimage`, form, {
-			headers: { ...form.getHeaders() },
-		});
-
-		//check if coverfile is present on database.
-		//delete the old image.
-		if (residentAccount.profile_image_link) {
-			const imageUrlsArray = [residentAccount.profile_image_link];
-			let params = "?";
-			for (let imageUrlIndex in imageUrlsArray) {
-				params += `image_files[]=${imageUrlsArray[imageUrlIndex]}`;
-			}
-			params += "&image_type=resident_profile";
-			params += "&directory=" + residentAccount.role.barangay.directory;
-			params += "&sub_directory=" + residentAccount.directory;
-
-			const { data: deleteImageMessage } = await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/delete` + params, {
-				headers: { ...form.getHeaders() },
-			});
-		}
-
-		updateResidentAccount.profile_image_link = message.image_name;
-	}
-
-	if (req.files["image_cover_file"]?.[0]) {
-		let form = new FormData();
-		form.append("image_cover_file", req.files["image_cover_file"][0].buffer, {
-			filename: req.files["image_cover_file"][0].originalname.replace(/ /g, ""),
-			contentType: req.files["image_cover_file"][0].mimetype,
-			knownLength: req.files["image_cover_file"][0].size,
-		});
-
-		form.append("image_type", "resident_cover");
-		form.append("directory", residentAccount.role.barangay.directory);
-		form.append("sub_directory", residentAccount.directory);
-
-		try {
-			const { data: message } = await axios.post(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/singleimage`, form, {
-				headers: { ...form.getHeaders() },
-			});
-
-			if (residentAccount.cover_image_link) {
-				const imageUrlsArray = [residentAccount.cover_image_link];
-				let params = "?";
-				for (let imageUrlIndex in imageUrlsArray) {
-					params += `image_files[]=${imageUrlsArray[imageUrlIndex]}`;
-				}
-				params += "&image_type=resident_cover";
-				params += "&directory=" + residentAccount.role.barangay.directory;
-				params += "&sub_directory=" + residentAccount.directory;
-
-				const { data: deleteImageMessage } = await axios.delete(`${process.env.IMAGE_HANDLER_URL}/onebanwaan/upload/delete` + params, {
-					headers: { ...form.getHeaders() },
-				});
-			}
-
-			updateResidentAccount.cover_image_link = message.image_name;
-		} catch (error) {
-			console.log("IMAGEERROR", error, error.stack);
-		}
-	}
-
-	const affectedRow = await ResidentAccount.update(updateResidentAccount, { where: { resident_account_id } });
-
-	res.send({ message: "Data updated successfully!", affectedRow });
-};
-
-export const destroy = async (req, res) => {
-	const id = req.params.id;
-
-	const barangay = await Barangay.findByPk(id);
-
-	//Check if barangay has existing residents, do not delete if it has existing residents that is not superadmin.
-
-	fs.unlink(barangay.logo, (error) => {
-		Barangay.destroy({
-			where: { barangay_id: id },
+		limit,
+		offset,
+		order: [[sortBy, sortOrder]],
+	})
+		.then((data) => {
+			const response = formatPaginatedData(data, page, limit);
+			res.send(response);
 		})
-			.then((data) => {
-				res.send({ message: "Data deleted successfully!" });
-			})
-			.catch((err) => {
-				res.status(400).send({ message: err });
-			});
-	});
-};
-
-export const updateAccountStatus = async (req, res) => {
-	const resident_account_id = req.params.resident_account_id;
-
-	try {
-		const residentAccountStatus = {
-			status: req.body.status,
-			barangay_role_id: req.body.barangay_role_id,
-		};
-
-		const affectedRow = await ResidentAccount.update(residentAccountStatus, {
-			where: { resident_account_id },
+		.catch((err) => {
+			res.status(500).send({ message: err.message, stack: err.stack });
 		});
-
-		res.send({ message: "Account status updated successfully!", affectedRow: affectedRow });
-	} catch (error) {
-		res.status(500).send({ message: "Error changing password", error: error, stack: error.stack });
-	}
 };
