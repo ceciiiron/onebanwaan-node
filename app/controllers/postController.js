@@ -149,7 +149,7 @@ export const findAllPaginated = async (req, res) => {
 		sortBy = "created_at",
 		date_from = null,
 		date_to = null,
-		post_type_id = null,
+		post_type_id,
 		sortOrder = "DESC",
 		resident_account_id,
 		likedPosts = false,
@@ -177,7 +177,7 @@ export const findAllPaginated = async (req, res) => {
 		"PI.post_images",
 	];
 
-	let orderByQuery = "ORDER BY Posts.created_at DESC";
+	let orderByQuery = " ORDER BY Posts.created_at DESC";
 	let isFavoriteQuery = "";
 
 	if (req.session.user?.resident_account_id) {
@@ -189,7 +189,7 @@ export const findAllPaginated = async (req, res) => {
 			Object.assign(bind, {
 				liked_by_resident_account_id: resident_account_id,
 			});
-			orderByQuery = "ORDER BY LikedPosts.created_at DESC";
+			orderByQuery = " ORDER BY LikedPosts.created_at DESC";
 		}
 
 		isFavoriteQuery += ` LEFT JOIN (SELECT post_id, post_heart_id, created_at, resident_account_id FROM PostHearts WHERE resident_account_id = $liked_by_current_resident_account_id) as IsFavorite ON IsFavorite.post_id = Posts.post_id`;
@@ -235,7 +235,7 @@ export const findAllPaginated = async (req, res) => {
 				: ""
 		}
 		${date_from && date_to ? ` AND DATE(Posts.created_at) BETWEEN ${date_from} AND ${date_to} ` : ""}
-		${post_type_id !== "ALL" || post_type_id !== "undefined" ? ` AND Posts.post_type_id = ${post_type_id}  ` : ""}
+		${post_type_id !== "ALL" && post_type_id !== undefined ? ` AND Posts.post_type_id = ${post_type_id}  ` : ""}
 		${orderByQuery} LIMIT $limit OFFSET $offset;`,
 		{
 			bind: bind,
