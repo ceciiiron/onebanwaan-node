@@ -235,7 +235,7 @@ export const findAllPaginated = async (req, res) => {
 				: ""
 		}
 		${date_from && date_to ? ` AND DATE(Posts.created_at) BETWEEN ${date_from} AND ${date_to} ` : ""}
-		${post_type_id !== "ALL" ? ` AND Posts.post_type_id = ${post_type_id}  ` : ""}
+		${post_type_id !== "ALL" || post_type_id === "undefined" ? ` AND Posts.post_type_id = ${post_type_id}  ` : ""}
 		${orderByQuery} LIMIT $limit OFFSET $offset;`,
 		{
 			bind: bind,
