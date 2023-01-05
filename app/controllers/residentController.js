@@ -7,6 +7,7 @@ const Barangay = db.sequelize.models.Barangay;
 const BarangayRole = db.sequelize.models.BarangayRole;
 const ResidentAccount = db.sequelize.models.ResidentAccount;
 const AccountVerification = db.sequelize.models.AccountVerification;
+const AuditLog = db.sequelize.models.AuditLog;
 // const ResidentAccountVerification = db.sequelize.models.ResidentAccountVerification;
 
 const Op = db.Sequelize.Op;
@@ -28,7 +29,6 @@ export const create = async (req, res) => {
 			password: bcrypt.hashSync(req.body.password.trim(), 8),
 			barangay_role_id: req.body.barangay_role_id,
 			directory: nanoid(16),
-			// privacy: req.body.privacy,
 		};
 
 		if (await ResidentAccount.findOne({ where: { email: residentAccount.email } })) {
@@ -42,6 +42,13 @@ export const create = async (req, res) => {
 
 		const newResident = await ResidentAccount.create(residentAccount);
 		delete newResident.dataValues.password;
+
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "ACCOUNTS",
+			action: "CREATE",
+			description: `Created ${residentAccount.email}`,
+		});
 
 		res.status(201).send(newResident);
 	} catch (error) {
@@ -69,6 +76,7 @@ export const checkEmail = async (req, res) => {
 	}
 };
 
+//PUBLIC
 export const createIndependent = async (req, res) => {
 	try {
 		// TODO: CHECK FIRST IF EMAIL IS TAKEN
@@ -391,7 +399,18 @@ export const update = async (req, res) => {
 		}
 	}
 
+	const acc = await ResidentAccount.findByPk(resident_account_id);
+
 	const affectedRow = await ResidentAccount.update(updateResidentAccount, { where: { resident_account_id } });
+
+	if (resident_account_id != req.session.user.resident_account_id) {
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "ACCOUNTS",
+			action: "UPDATE",
+			description: `Updated profile of ${acc.email}`,
+		});
+	}
 
 	res.send({ message: "Data updated successfully!", affectedRow });
 };
@@ -454,8 +473,17 @@ export const changePassword = async (req, res) => {
 			password: bcrypt.hashSync(req.body.password?.trim(), 8),
 		};
 
+		const account = await ResidentAccount.findByPk(resident_account_id);
+
 		const affectedRow = await ResidentAccount.update(residentPassword, {
 			where: { resident_account_id },
+		});
+
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "ACCOUNTS",
+			action: "UPDATE",
+			description: `Changed password of ${account.email}`,
 		});
 
 		res.send({ message: "Password changed successfully!", affectedRow: affectedRow });

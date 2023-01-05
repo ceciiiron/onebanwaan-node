@@ -4,8 +4,46 @@ import capitalize from "capitalize";
 const Barangay = db.sequelize.models.Barangay;
 const BarangayDocumentRequest = db.sequelize.models.BarangayDocumentRequest;
 const BarangayDocumentSetting = db.sequelize.models.BarangayDocumentSetting;
+const AuditLog = db.sequelize.models.AuditLog;
 const DocumentType = db.sequelize.models.DocumentType;
 const Op = db.Sequelize.Op;
+
+const paymentStatusText = (status) => {
+	switch (status) {
+		case 1:
+			return "pending";
+			break;
+		case 2:
+			return "unpaid";
+			break;
+		case 3:
+			return "paid";
+			break;
+		case 4:
+			return "free";
+			break;
+		default:
+			return "void";
+			break;
+	}
+};
+
+const requestStatusText = (status) => {
+	switch (status) {
+		case 1:
+			return "pending";
+			break;
+		case 2:
+			return "approved";
+			break;
+		case 3:
+			return "issued";
+			break;
+		default:
+			return "rejected";
+			break;
+	}
+};
 
 export const create = async (req, res) => {
 	const { barangay_id } = req.params;
@@ -162,6 +200,8 @@ export const findOne = async (req, res) => {
 export const updatePaymentStatus = async (req, res) => {
 	const { barangay_document_request_id } = req.params;
 
+	const currentRequest = await BarangayDocumentRequest.findByPk(barangay_document_request_id);
+
 	try {
 		let barangayDocumentRequest = {
 			payment_status: req.body.payment_status,
@@ -173,6 +213,15 @@ export const updatePaymentStatus = async (req, res) => {
 
 		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
 
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "DOCUMENT ISSUANCE",
+			action: "UPDATE",
+			description: `Updated payment status of ${currentRequest.full_name} (${currentRequest.ticket_code}) from ${paymentStatusText(
+				currentRequest.payment_status
+			)} to ${paymentStatusText(barangayDocumentRequest.payment_status)}`,
+		});
+
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {
 		//delete file
@@ -182,6 +231,8 @@ export const updatePaymentStatus = async (req, res) => {
 
 export const updateRequestStatus = async (req, res) => {
 	const { barangay_document_request_id } = req.params;
+
+	const currentRequest = await BarangayDocumentRequest.findByPk(barangay_document_request_id);
 
 	try {
 		let barangayDocumentRequest = {
@@ -198,6 +249,15 @@ export const updateRequestStatus = async (req, res) => {
 
 		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
 
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "DOCUMENT ISSUANCE",
+			action: "UPDATE",
+			description: `Updated request status of ${currentRequest.full_name} (${currentRequest.ticket_code}) from ${requestStatusText(
+				currentRequest.request_status
+			)} to ${requestStatusText(barangayDocumentRequest.request_status)}`,
+		});
+
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {
 		//delete file
@@ -207,6 +267,8 @@ export const updateRequestStatus = async (req, res) => {
 
 export const updatePersonalInformation = async (req, res) => {
 	const { barangay_document_request_id } = req.params;
+
+	const currentRequest = await BarangayDocumentRequest.findByPk(barangay_document_request_id);
 
 	try {
 		const barangayDocumentRequest = {
@@ -221,6 +283,13 @@ export const updatePersonalInformation = async (req, res) => {
 
 		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
 
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "DOCUMENT ISSUANCE",
+			action: "UPDATE",
+			description: `Updated personal information of ${currentRequest.full_name} (${currentRequest.ticket_code})`,
+		});
+
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {
 		//delete file
@@ -231,6 +300,8 @@ export const updatePersonalInformation = async (req, res) => {
 export const updateDocumentInformation = async (req, res) => {
 	const { barangay_document_request_id } = req.params;
 
+	const currentRequest = await BarangayDocumentRequest.findByPk(barangay_document_request_id);
+
 	try {
 		const barangayDocumentRequest = {
 			purpose: req.body.purpose,
@@ -238,6 +309,13 @@ export const updateDocumentInformation = async (req, res) => {
 		};
 
 		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
+
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "DOCUMENT ISSUANCE",
+			action: "UPDATE",
+			description: `Updated document information of ${currentRequest.full_name} (${currentRequest.ticket_code})`,
+		});
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {

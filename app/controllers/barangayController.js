@@ -637,3 +637,98 @@ export const updateCitizenCharter = async (req, res) => {
 
 	res.send({ message: "Data updated successfully!", affectedRow, citizen_charter: updateBarangay.citizen_charter });
 };
+
+// BARANGAY AUDITS
+
+export const findAllAuditLogsByBarangay = (req, res) => {
+	const { page = 0, size = 20, search, selected_module, action, filter_date, date_from, date_to, sortBy = "created_at", sortOrder = "DESC" } = req.query;
+	const { limit, offset } = getPagination(page, size);
+	const { barangay_id } = req.params;
+	const barangayDocumentCondition = {};
+	const barangayCondition = {};
+
+	Object.assign(barangayCondition, { barangay_id: barangay_id });
+
+	let searchCondition = {};
+	if (search) {
+		searchCondition = {
+			[Op.or]: [{ first_name: { [Op.like]: `%${search}%` } }],
+		};
+		// Object.assign(barangayDocumentCondition, searchCondition);
+	}
+
+	if (selected_module && selected_module != "ALL") {
+		const statusCondition = {
+			module: selected_module,
+		};
+		Object.assign(barangayDocumentCondition, statusCondition);
+	}
+
+	if (action && action != "ALL") {
+		const statusCondition = {
+			action: action,
+		};
+		Object.assign(barangayDocumentCondition, statusCondition);
+	}
+
+	//DATE FILTER
+	if (filter_date && filter_date != "ALL" && date_from && date_to) {
+		Object.assign(barangayDocumentCondition, {
+			[filter_date]: { [Op.between]: [date_from, date_to] },
+		});
+	}
+
+	return AuditLog.findAndCountAll({
+		where: barangayDocumentCondition,
+		include: {
+			model: ResidentAccount,
+			as: "audit_log",
+			where: searchCondition,
+			attributes: [
+				"resident_account_id",
+				"profile_image_link",
+				"status",
+				"directory",
+				[
+					db.sequelize.fn(
+						"CONCAT_WS",
+						"|",
+						db.sequelize.col("first_name"),
+						db.sequelize.col("middle_initial"),
+						db.sequelize.col("last_name"),
+						db.sequelize.col("suffix")
+					),
+					"full_name",
+				],
+				"email",
+			],
+			include: [
+				{
+					model: BarangayRole,
+					required: true,
+					as: "role",
+					attributes: ["barangay_role_id", "name"],
+					include: [
+						{
+							model: Barangay,
+							required: true,
+							as: "barangay",
+							attributes: ["barangay_id", "name", "logo", "number", "directory"],
+							where: barangayCondition,
+						},
+					],
+				},
+			],
+		},
+		limit,
+		offset,
+		order: [[sortBy, sortOrder]],
+	})
+		.then((data) => {
+			const response = formatPaginatedData(data, page, limit);
+			res.send(response);
+		})
+		.catch((err) => {
+			res.status(500).send({ message: err.message, stack: err.stack });
+		});
+};

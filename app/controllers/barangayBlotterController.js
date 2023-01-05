@@ -8,7 +8,22 @@ const BarangayDocumentRequest = db.sequelize.models.BarangayDocumentRequest;
 const BarangayDocumentSetting = db.sequelize.models.BarangayDocumentSetting;
 const BarangayBlotter = db.sequelize.models.BarangayBlotter;
 const BarangayCaseType = db.sequelize.models.BarangayCaseType;
+const AuditLog = db.sequelize.models.AuditLog;
 const Op = db.Sequelize.Op;
+
+const reportStatusText = (status) => {
+	switch (status) {
+		case 1:
+			return "pending";
+			break;
+		case 2:
+			return "verified";
+			break;
+		default:
+			return "false report";
+			break;
+	}
+};
 
 export const create = async (req, res) => {
 	try {
@@ -201,6 +216,8 @@ export const findOne = async (req, res) => {
 export const updateStatus = async (req, res) => {
 	const { barangay_blotter_id } = req.params;
 
+	const currentRequest = await BarangayBlotter.findByPk(barangay_blotter_id);
+
 	try {
 		let barangayBlotter = {
 			status: req.body.status,
@@ -211,6 +228,15 @@ export const updateStatus = async (req, res) => {
 		}
 
 		await BarangayBlotter.update(barangayBlotter, { where: { barangay_blotter_id } });
+
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "BLOTTER RECORDS",
+			action: "UPDATE",
+			description: `Updated status of B${barangay_blotter_id} from ${reportStatusText(currentRequest.status)} to ${reportStatusText(
+				barangayBlotter.status
+			)}`,
+		});
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {
@@ -228,6 +254,37 @@ export const updateCaseType = async (req, res) => {
 		};
 
 		await BarangayBlotter.update(barangayBlotter, { where: { barangay_blotter_id } });
+
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "BLOTTER RECORDS",
+			action: "UPDATE",
+			description: `Updated case type of B${barangay_blotter_id}`,
+		});
+
+		res.send({ message: "Data updated successfully!" });
+	} catch (error) {
+		//delete file
+		res.status(500).send({ message: `Could not upload data: ${error}` });
+	}
+};
+
+export const updateNarrative = async (req, res) => {
+	const { barangay_blotter_id } = req.params;
+
+	try {
+		let barangayBlotter = {
+			narrative: !req.body.narrative ? null : req.body.narrative,
+		};
+
+		await BarangayBlotter.update(barangayBlotter, { where: { barangay_blotter_id } });
+
+		await AuditLog.create({
+			resident_account_id: req.session.user.resident_account_id,
+			module: "BLOTTER RECORDS",
+			action: "UPDATE",
+			description: `Updated narrative of B${barangay_blotter_id}`,
+		});
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {

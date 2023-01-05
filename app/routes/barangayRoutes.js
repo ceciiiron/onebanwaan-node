@@ -12,6 +12,7 @@ import {
 	pinPost,
 	unpinPost,
 	updateCitizenCharter,
+	findAllAuditLogsByBarangay,
 } from "../controllers/barangayController.js";
 import express from "express";
 const router = express.Router();
@@ -61,6 +62,7 @@ export default (app) => {
 	router.get("/documentsettings", findAllDocumentSettings);
 	router.post("/", upload.single("image_file"), create);
 	router.get("/", findAll);
+	router.get("/:barangay_id/auditlogs", findAllAuditLogsByBarangay);
 	router.get("/:id", findOne);
 	router.put(
 		"/:barangay_id/publicprofile",
