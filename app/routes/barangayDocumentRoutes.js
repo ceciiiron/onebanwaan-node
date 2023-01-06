@@ -4,6 +4,7 @@ import {
 	create as createRequest,
 	findAllRequestsByBarangay,
 	findOne,
+	generateReport,
 	tickettracker,
 	updateDocumentInformation,
 	updatePaymentStatus,
@@ -15,6 +16,7 @@ const router = express.Router();
 
 export default (app) => {
 	router.get("/documentrequests/:ticket_code", tickettracker);
+	router.get("/:barangay_id/documentrequests/reports", generateReport);
 	router.get("/:barangay_id/documentsettings/:barangay_document_setting_id", findOneSetting);
 	router.put("/:barangay_id/documentsettings/:barangay_document_setting_id", update);
 	// router.delete("/:barangay_id/hotlines/:barangay_hotline_id", destroy);

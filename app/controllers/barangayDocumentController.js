@@ -349,3 +349,116 @@ export const tickettracker = async (req, res) => {
 
 	return data ? res.send(data) : res.status(404).send({ message: `Request not found` });
 };
+
+// GENERATE REPORT
+
+export const generateReport = async (req, res) => {
+	const { report, date } = req.query;
+	const { barangay_id } = req.params;
+	try {
+		let results = "";
+
+		if (report == "MONTHLY") {
+			const [rs, md] = await db.sequelize.query(
+				`SELECT documents.name, R.year, R.month, IFNULL(R.total, "0.00") as total, IFNULL(TotalIssuedSelect.total_issued, 0) as total_issued FROM DocumentTypes documents
+				LEFT JOIN (SELECT YEAR(BDR.paid_at) as "year", MONTH(BDR.paid_at) as "month", DT.name, SUM(BDR.captured_fee) as "total", DT.document_type_id as document_type_id from BarangayDocumentRequests BDR
+					JOIN BarangayDocumentSettings BDS ON BDS.barangay_document_setting_id = BDR.barangay_document_setting_id
+					JOIN DocumentTypes DT ON DT.document_type_id = BDS.document_type_id
+					WHERE BDR.payment_status = 3 AND YEAR(BDR.paid_at) = $year AND MONTH(BDR.paid_at) = $month
+					AND BDR.barangay_id = $barangay_id
+					group by DT.document_type_id , year(BDR.paid_at), month(BDR.paid_at)) 
+						R ON R.document_type_id = documents.document_type_id
+				LEFT JOIN (SELECT COUNT(BDR.barangay_document_request_id) as "total_issued", DT.document_type_id as document_type_id from BarangayDocumentRequests BDR
+					JOIN BarangayDocumentSettings BDS ON BDS.barangay_document_setting_id = BDR.barangay_document_setting_id
+					JOIN DocumentTypes DT ON DT.document_type_id = BDS.document_type_id
+					WHERE BDR.request_status = 3 AND YEAR(BDR.issued_at) = $year AND MONTH(BDR.issued_at) = $month
+					AND BDR.barangay_id = $barangay_id
+					group by DT.document_type_id , year(BDR.issued_at), month(BDR.paid_at)) TotalIssuedSelect ON TotalIssuedSelect.document_type_id = documents.document_type_id;`,
+				{
+					bind: {
+						barangay_id: barangay_id,
+						year: date.split("-")[0],
+						month: date.split("-")[1],
+					},
+				}
+			);
+			results = rs;
+		} else if (report == "DAILY") {
+			const [rs, md] = await db.sequelize.query(
+				`SELECT documents.name, R.year, R.month, IFNULL(R.total, "0.00") as total, IFNULL(TotalIssuedSelect.total_issued, 0) as total_issued FROM DocumentTypes documents
+				LEFT JOIN (SELECT YEAR(BDR.paid_at) as "year", MONTH(BDR.paid_at) as "month", DT.name, SUM(BDR.captured_fee) as "total", DT.document_type_id as document_type_id from BarangayDocumentRequests BDR
+					JOIN BarangayDocumentSettings BDS ON BDS.barangay_document_setting_id = BDR.barangay_document_setting_id
+					JOIN DocumentTypes DT ON DT.document_type_id = BDS.document_type_id
+					WHERE BDR.payment_status = 3 AND BDR.paid_at = $date
+					AND BDR.barangay_id = $barangay_id
+					group by DT.document_type_id , BDR.paid_at) 
+						R ON R.document_type_id = documents.document_type_id
+				LEFT JOIN (SELECT COUNT(BDR.barangay_document_request_id) as "total_issued", DT.document_type_id as document_type_id from BarangayDocumentRequests BDR
+					JOIN BarangayDocumentSettings BDS ON BDS.barangay_document_setting_id = BDR.barangay_document_setting_id
+					JOIN DocumentTypes DT ON DT.document_type_id = BDS.document_type_id
+					WHERE BDR.request_status = 3 AND BDR.issued_at = $date
+					AND BDR.barangay_id = $barangay_id
+					group by DT.document_type_id , BDR.issued_at) TotalIssuedSelect ON TotalIssuedSelect.document_type_id = documents.document_type_id;`,
+				{
+					bind: {
+						barangay_id: barangay_id,
+						date: date,
+					},
+				}
+			);
+			results = rs;
+		} else if (report == "YEARLY") {
+			const [rs, md] = await db.sequelize.query(
+				`SELECT documents.name, R.year, R.month, IFNULL(R.total, "0.00") as total, IFNULL(TotalIssuedSelect.total_issued, 0) as total_issued FROM DocumentTypes documents
+				LEFT JOIN (SELECT YEAR(BDR.paid_at) as "year", MONTH(BDR.paid_at) as "month", DT.name, SUM(BDR.captured_fee) as "total", DT.document_type_id as document_type_id from BarangayDocumentRequests BDR
+					JOIN BarangayDocumentSettings BDS ON BDS.barangay_document_setting_id = BDR.barangay_document_setting_id
+					JOIN DocumentTypes DT ON DT.document_type_id = BDS.document_type_id
+					WHERE BDR.payment_status = 3 AND YEAR(BDR.paid_at) = YEAR($date)
+					AND BDR.barangay_id = $barangay_id
+					group by DT.document_type_id , YEAR(BDR.paid_at)) 
+						R ON R.document_type_id = documents.document_type_id
+				LEFT JOIN (SELECT COUNT(BDR.barangay_document_request_id) as "total_issued", DT.document_type_id as document_type_id from BarangayDocumentRequests BDR
+					JOIN BarangayDocumentSettings BDS ON BDS.barangay_document_setting_id = BDR.barangay_document_setting_id
+					JOIN DocumentTypes DT ON DT.document_type_id = BDS.document_type_id
+					WHERE BDR.request_status = 3 AND YEAR(BDR.issued_at) = YEAR($date)
+					AND BDR.barangay_id = $barangay_id
+					group by DT.document_type_id , YEAR(BDR.issued_at)) TotalIssuedSelect ON TotalIssuedSelect.document_type_id = documents.document_type_id;`,
+				{
+					bind: {
+						barangay_id: barangay_id,
+						date: date,
+					},
+				}
+			);
+			results = rs;
+		} else if (report == "WEEKLY") {
+			const [rs, md] = await db.sequelize.query(
+				`SELECT documents.name, R.year, R.month, IFNULL(R.total, "0.00") as total, IFNULL(TotalIssuedSelect.total_issued, 0) as total_issued FROM DocumentTypes documents
+				LEFT JOIN (SELECT YEAR(BDR.paid_at) as "year", MONTH(BDR.paid_at) as "month", DT.name, SUM(BDR.captured_fee) as "total", DT.document_type_id as document_type_id from BarangayDocumentRequests BDR
+					JOIN BarangayDocumentSettings BDS ON BDS.barangay_document_setting_id = BDR.barangay_document_setting_id
+					JOIN DocumentTypes DT ON DT.document_type_id = BDS.document_type_id
+					WHERE BDR.payment_status = 3 AND WEEK(BDR.paid_at) = WEEK($date)
+					AND BDR.barangay_id = $barangay_id
+					group by DT.document_type_id , WEEK(BDR.paid_at)) 
+						R ON R.document_type_id = documents.document_type_id
+				LEFT JOIN (SELECT COUNT(BDR.barangay_document_request_id) as "total_issued", DT.document_type_id as document_type_id from BarangayDocumentRequests BDR
+					JOIN BarangayDocumentSettings BDS ON BDS.barangay_document_setting_id = BDR.barangay_document_setting_id
+					JOIN DocumentTypes DT ON DT.document_type_id = BDS.document_type_id
+					WHERE BDR.request_status = 3 AND WEEK(BDR.issued_at) = WEEK($date)
+					AND BDR.barangay_id = $barangay_id
+					group by DT.document_type_id , WEEK(BDR.issued_at)) TotalIssuedSelect ON TotalIssuedSelect.document_type_id = documents.document_type_id;`,
+				{
+					bind: {
+						barangay_id: barangay_id,
+						date: date,
+					},
+				}
+			);
+			results = rs;
+		}
+
+		res.status(200).send(results ?? []);
+	} catch (error) {
+		res.status(500).send({ message: `Could not fetch data: ${error}`, stack: error.stack });
+	}
+};
