@@ -128,7 +128,7 @@ export function findAll(req, res) {
 		where: {
 			admin_id: { [Op.ne]: req.session.user.admin_id },
 		},
-		attributes: ["admin_id", "name", "email", "contact_number", "created_at", "updated_at"],
+		attributes: ["admin_id", "role", "email", "contact_number", "created_at", "updated_at"],
 	})
 		.then((data) => {
 			res.send(data);
@@ -290,6 +290,7 @@ export async function currentUpdate(req, res) {
 			suffix: capitalize.words(req.body.suffix?.trim() ?? "", true) || null,
 			contact_number: req.body.contact_number?.trim(),
 			email: req.body.email,
+			role: req.body.role,
 		};
 
 		if (req.file) {

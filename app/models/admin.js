@@ -30,6 +30,7 @@ export default (sequelize, DataTypes) => {
 			suffix: { type: DataTypes.STRING, allowNull: true },
 			// name: { type: DataTypes.STRING, allowNull: false },
 			email: { type: DataTypes.STRING, allowNull: false },
+			role: { type: DataTypes.STRING, allowNull: false },
 			password: { type: DataTypes.STRING, allowNull: false },
 			contact_number: DataTypes.STRING,
 			profile_image_link: { type: DataTypes.STRING, allowNull: true },
