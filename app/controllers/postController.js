@@ -126,7 +126,7 @@ const formatPaginatedData = (fetchedData, total, page, limit) => {
 	return { totalItems, data: fetchedData, totalPages, currentPage, rowPerPage: limit };
 };
 
-const fields = [
+let fields = [
 	"Posts.*",
 	"PT.name as post_type_name",
 	"RA.profile_image_link",
@@ -273,6 +273,7 @@ export const findAllByBarangayPaginated = async (req, res) => {
 		resident_account_id,
 		barangay_id = "",
 		announcementsOnly = false,
+		healthServicesOnly = false,
 	} = req.query;
 	const { limit, offset } = getPagination(page, size);
 
@@ -290,7 +291,13 @@ export const findAllByBarangayPaginated = async (req, res) => {
 		Object.assign(bind, {
 			liked_by_current_resident_account_id: req.session.user?.resident_account_id,
 		});
+	} else {
+		fields = fields.filter(function (item) {
+			return item !== "(IsFavorite.post_heart_id IS NOT NULL) as is_favorite";
+		});
 	}
+
+	//REMOVE FROM FIELDS;
 
 	Object.assign(bind, {
 		resident_account_id: resident_account_id,
@@ -310,6 +317,7 @@ export const findAllByBarangayPaginated = async (req, res) => {
 		${isFavoriteQuery}
 		WHERE B.barangay_id = $barangay_id AND Posts.as_barangay_admin = 1
 		${announcementsOnly ? `AND (PT.name = "Announcement" OR PT.name = "Advisory")` : ""}
+		${healthServicesOnly ? `AND (PT.name = "Health Service")` : ""}
 		${orderByQuery} LIMIT $limit OFFSET $offset;`,
 		{
 			bind: bind,
