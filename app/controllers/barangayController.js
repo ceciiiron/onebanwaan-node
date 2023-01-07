@@ -273,6 +273,7 @@ export const findOne = async (req, res) => {
 				"bio",
 				"pinned_post",
 				"citizen_charter",
+				"health_schedule",
 				"address",
 				"directory",
 				[db.sequelize.fn("DATE_FORMAT", db.sequelize.col("Barangay.created_at"), "%m-%d-%Y %H:%i:%s"), "created_at"],
@@ -581,6 +582,25 @@ export const updateLocation = async (req, res) => {
 		module: "BARANGAY PROFILE",
 		action: "UPDATE",
 		description: `Updated barangay location`,
+	});
+
+	res.send({ message: "Data updated successfully!", affectedRow });
+};
+
+export const updateHealthSchedule = async (req, res) => {
+	const { barangay_id } = req.params;
+
+	const updateBarangay = {
+		health_schedule: req.body.health_schedule.trim(),
+	};
+
+	const affectedRow = await Barangay.update(updateBarangay, { where: { barangay_id } });
+
+	await AuditLog.create({
+		resident_account_id: req.session.user.resident_account_id,
+		module: "BARANGAY PROFILE",
+		action: "UPDATE",
+		description: `Updated barangay health schedule`,
 	});
 
 	res.send({ message: "Data updated successfully!", affectedRow });

@@ -13,6 +13,7 @@ import {
 	unpinPost,
 	updateCitizenCharter,
 	findAllAuditLogsByBarangay,
+	updateHealthSchedule,
 } from "../controllers/barangayController.js";
 import express from "express";
 const router = express.Router();
@@ -77,6 +78,7 @@ export default (app) => {
 	router.put("/:barangay_id/unpinpost", unpinPost);
 	router.put("/:barangay_id/visionmissiongoals", updateVisionMissionGoals);
 	router.put("/:barangay_id/location", updateLocation);
+	router.put("/:barangay_id/healthschedule", updateHealthSchedule);
 	router.delete("/:id", destroy);
 
 	app.use("/api/barangays", router);

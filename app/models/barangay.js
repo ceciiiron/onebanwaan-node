@@ -70,6 +70,7 @@ export default (sequelize, DataTypes) => {
 			lng: { type: DataTypes.DOUBLE },
 			pinned_post: { type: DataTypes.INTEGER, allowNull: true },
 			citizen_charter: { type: DataTypes.STRING(500) },
+			health_schedule: { type: DataTypes.STRING(500) },
 		},
 		{
 			sequelize,

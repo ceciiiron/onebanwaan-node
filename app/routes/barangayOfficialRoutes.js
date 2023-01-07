@@ -1,4 +1,4 @@
-import { create, findAll, findAllByBarangay, findOne, update, destroy } from "../controllers/barangayOfficialController.js";
+import { create, findAllByBarangay, findOne, update, destroy } from "../controllers/barangayOfficialController.js";
 import express from "express";
 const router = express.Router();
 
@@ -9,7 +9,7 @@ export default (app) => {
 	router.post("/:barangay_id/officials", create);
 
 	router.get("/:barangay_id/officials", findAllByBarangay);
-	router.get("/officials/", findAll);
+	// router.get("/officials/", findAll);
 
 	app.use("/api/barangays", router);
 };

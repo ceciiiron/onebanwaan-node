@@ -17,7 +17,7 @@ export const create = async (req, res) => {
 			display_name: capitalize.words(req.body.display_name?.trim() ?? "", true) || null,
 			position: capitalize.words(req.body.position?.trim() ?? "", true) || null,
 			hierarchy: req.body.hierarchy,
-			// availability: req.body.availability,
+			office_schedule: req.body.office_schedule,
 			contact_number: req.body.contact_number ? req.body.contact_number.trim() : null,
 			email: req.body.email ? req.body.email.trim() : null,
 		};
@@ -50,67 +50,67 @@ const formatPaginatedData = (fetchedData, page, limit) => {
 	return { totalItems, data, totalPages, currentPage, rowPerPage: limit };
 };
 
-export const findAll = (req, res) => {
-	const { page, size, search, barangay_id } = req.query;
-	const { limit, offset } = getPagination(page, size);
+// export const findAll = (req, res) => {
+// 	const { page, size, search, barangay_id } = req.query;
+// 	const { limit, offset } = getPagination(page, size);
 
-	let hotlineCondition = {};
+// 	let hotlineCondition = {};
 
-	//return rows: barangay_id: 12, hotlines: [ ...hotlines ]
-	// return Barangay.findAndCountAll({
-	// 	where: null,
-	// 	limit,
-	// 	offset,
-	// 	include: { model: BarangayHotline, attributes: ["barangay_hotline_id", "name", "number", "created_at", "updated_at"], required: true, as: "hotlines" },
-	// 	order: [["created_at", "DESC"]],
-	// })
-	// 	.then((data) => {
-	// 		const response = formatPaginatedData(data, page, limit);
-	// 		res.send(response);
-	// 	})
-	// 	.catch((err) => {
-	// 		res.status(500).send({ message: err.message || "An error occured while retrieving data" });
-	// 	});
+// 	//return rows: barangay_id: 12, hotlines: [ ...hotlines ]
+// 	// return Barangay.findAndCountAll({
+// 	// 	where: null,
+// 	// 	limit,
+// 	// 	offset,
+// 	// 	include: { model: BarangayHotline, attributes: ["barangay_hotline_id", "name", "number", "created_at", "updated_at"], required: true, as: "hotlines" },
+// 	// 	order: [["created_at", "DESC"]],
+// 	// })
+// 	// 	.then((data) => {
+// 	// 		const response = formatPaginatedData(data, page, limit);
+// 	// 		res.send(response);
+// 	// 	})
+// 	// 	.catch((err) => {
+// 	// 		res.status(500).send({ message: err.message || "An error occured while retrieving data" });
+// 	// 	});
 
-	if (barangay_id && barangay_id != "ALL") {
-		const searchBarangayCondition = {
-			barangay_id: barangay_id,
-		};
-		Object.assign(hotlineCondition, searchBarangayCondition);
-	}
+// 	if (barangay_id && barangay_id != "ALL") {
+// 		const searchBarangayCondition = {
+// 			barangay_id: barangay_id,
+// 		};
+// 		Object.assign(hotlineCondition, searchBarangayCondition);
+// 	}
 
-	if (search) {
-		const searchCondition = {
-			[Op.or]: [{ name: { [Op.like]: `${search}%` } }, { number: { [Op.like]: `${search}%` } }],
-		};
-		Object.assign(hotlineCondition, searchCondition);
-	}
+// 	if (search) {
+// 		const searchCondition = {
+// 			[Op.or]: [{ name: { [Op.like]: `${search}%` } }, { number: { [Op.like]: `${search}%` } }],
+// 		};
+// 		Object.assign(hotlineCondition, searchCondition);
+// 	}
 
-	return BarangayHotline.findAndCountAll({
-		where: hotlineCondition,
-		limit,
-		offset,
-		attributes: [
-			"barangay_hotline_id",
-			"barangay_id",
-			"name",
-			"number",
-			"created_at",
-			"updated_at",
-			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col(`barangayhotline.updated_at`), "%m-%d-%Y %H:%i:%s"), "updated_at"],
-			// [db.Sequelize.literal("`Barangay`.`name`"), "barangay_name"],
-		],
-		include: { model: Barangay, attributes: ["name", "logo", "number"], required: true, as: "barangay" },
-		order: [["created_at", "DESC"]],
-	})
-		.then((data) => {
-			const response = formatPaginatedData(data, page, limit);
-			res.send(response);
-		})
-		.catch((err) => {
-			res.status(500).send({ message: err.message || "An error occured while retrieving data" });
-		});
-};
+// 	return BarangayHotline.findAndCountAll({
+// 		where: hotlineCondition,
+// 		limit,
+// 		offset,
+// 		attributes: [
+// 			"barangay_hotline_id",
+// 			"barangay_id",
+// 			"name",
+// 			"number",
+// 			"created_at",
+// 			"updated_at",
+// 			[db.sequelize.fn("DATE_FORMAT", db.sequelize.col(`barangayhotline.updated_at`), "%m-%d-%Y %H:%i:%s"), "updated_at"],
+// 			// [db.Sequelize.literal("`Barangay`.`name`"), "barangay_name"],
+// 		],
+// 		include: { model: Barangay, attributes: ["name", "logo", "number"], required: true, as: "barangay" },
+// 		order: [["created_at", "DESC"]],
+// 	})
+// 		.then((data) => {
+// 			const response = formatPaginatedData(data, page, limit);
+// 			res.send(response);
+// 		})
+// 		.catch((err) => {
+// 			res.status(500).send({ message: err.message || "An error occured while retrieving data" });
+// 		});
+// };
 
 export const findAllByBarangay = (req, res) => {
 	const { page, size = 10 } = req.query;
@@ -145,7 +145,8 @@ export const update = async (req, res) => {
 		display_name: capitalize.words(req.body.display_name?.trim() ?? "", true) || null,
 		position: capitalize.words(req.body.position?.trim() ?? "", true) || null,
 		hierarchy: req.body.hierarchy,
-		availability: req.body.availability,
+		// availability: req.body.availability,
+		office_schedule: req.body.office_schedule,
 		contact_number: req.body.contact_number ? req.body.contact_number.trim() : null,
 		email: req.body.email ? req.body.email.trim() : null,
 	};

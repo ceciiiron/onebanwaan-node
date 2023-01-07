@@ -31,9 +31,10 @@ export default (sequelize, DataTypes) => {
 			display_name: { type: DataTypes.STRING, allowNull: false },
 			position: { type: DataTypes.STRING, allowNull: false },
 			hierarchy: { type: DataTypes.INTEGER, allowNull: false },
-			availability: { type: DataTypes.BOOLEAN, defaultValue: true },
+			// availability: { type: DataTypes.BOOLEAN, defaultValue: true },
 			contact_number: { type: DataTypes.STRING, allowNull: true },
 			email: { type: DataTypes.STRING, allowNull: true },
+			office_schedule: { type: DataTypes.STRING(500), allowNull: true },
 		},
 		{
 			sequelize,
