@@ -111,7 +111,6 @@ export const createIndependent = async (req, res) => {
 		let verificationImages = "";
 
 		if (req.files.length > 0) {
-			console.log("MAY LAMAN YUNG FILES");
 			let form = new FormData();
 
 			req.files.forEach((file) => {
@@ -135,7 +134,7 @@ export const createIndependent = async (req, res) => {
 				//Under posts directory
 
 				let urls = message.image_urls;
-				verificationImages = `${urls[0].image_url}|${urls[0].image_url}`;
+				verificationImages = `${urls[0].image_url}|${urls[1].image_url}`;
 			} catch (error) {
 				console.log(error);
 				res.status(500).send({ message: `Could not upload photos: ${error}`, stack: error.stack, error });
