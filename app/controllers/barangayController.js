@@ -396,6 +396,8 @@ export const destroy = async (req, res) => {
 
 	//TODO: Check if barangay has existing residents, do not delete if it has existing residents that is not superadmin.
 
+	//Delete DIR
+
 	Barangay.destroy({
 		where: { barangay_id: id },
 	})

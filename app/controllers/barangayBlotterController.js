@@ -292,3 +292,47 @@ export const updateNarrative = async (req, res) => {
 		res.status(500).send({ message: `Could not upload data: ${error}` });
 	}
 };
+
+// STATISTICS
+
+export const barangayStatistics = async (req, res) => {
+	const { barangay_id } = req.params;
+
+	try {
+		const total_barangay_blotter = await db.sequelize.query(
+			`SELECT COUNT(BB.barangay_blotter_id) as total_barangay_blotter FROM BarangayBlotters BB WHERE BB.barangay_id = $barangay_id;`,
+			{
+				bind: {
+					barangay_id: barangay_id,
+				},
+				type: db.Sequelize.QueryTypes.SELECT,
+				plain: true,
+			}
+		);
+
+		const total_pending_barangay_blotter = await db.sequelize.query(
+			`SELECT COUNT(BB.barangay_blotter_id) as total_pending_barangay_blotter FROM BarangayBlotters BB WHERE BB.barangay_id = $barangay_id AND BB.status = 1;`,
+			{
+				bind: {
+					barangay_id: barangay_id,
+				},
+				type: db.Sequelize.QueryTypes.SELECT,
+				plain: true,
+			}
+		);
+		const total_verified_barangay_blotter = await db.sequelize.query(
+			`SELECT COUNT(BB.barangay_blotter_id) as total_verified_barangay_blotter FROM BarangayBlotters BB WHERE BB.barangay_id = $barangay_id AND BB.status = 2;`,
+			{
+				bind: {
+					barangay_id: barangay_id,
+				},
+				type: db.Sequelize.QueryTypes.SELECT,
+				plain: true,
+			}
+		);
+
+		res.status(200).send({ total_barangay_blotter, total_pending_barangay_blotter, total_verified_barangay_blotter });
+	} catch (error) {
+		res.status(500).send({ message: `Could not fetch data: ${error}`, stack: error.stack });
+	}
+};

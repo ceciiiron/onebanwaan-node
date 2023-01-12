@@ -54,13 +54,14 @@ export const create = async (req, res) => {
 		});
 
 		const newPost = await Post.create(post);
-
-		await AuditLog.create({
-			resident_account_id: req.session.user.resident_account_id,
-			module: "BARANGAY POSTS",
-			action: "CREATE",
-			description: `Created ${post.title}`,
-		});
+		if (post.as_barangay_admin) {
+			await AuditLog.create({
+				resident_account_id: req.session.user.resident_account_id,
+				module: "BARANGAY POSTS",
+				action: "CREATE",
+				description: `Created ${post.title}`,
+			});
+		}
 
 		if (req.files.length > 0) {
 			console.log("MAY LAMAN YUNG FILES");
@@ -536,12 +537,15 @@ export const destroy = async (req, res) => {
 			where: { post_id },
 		});
 
-		await AuditLog.create({
-			resident_account_id: req.session.user.resident_account_id,
-			module: "BARANGAY POSTS",
-			action: "DELETE",
-			description: `Deleted ${post.title}`,
-		});
+		if (post.as_barangay_admin) {
+			await AuditLog.create({
+				resident_account_id: req.session.user.resident_account_id,
+				module: "BARANGAY POSTS",
+				action: "DELETE",
+				description: `Deleted ${post.title}`,
+			});
+		}
+
 		res.send({ message: "Data deleted successfully!", data });
 	} catch (error) {
 		res.status(500).send({ message: error });
