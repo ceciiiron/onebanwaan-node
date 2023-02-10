@@ -42,7 +42,7 @@ var mailOptions = {
 	sender: "One Banwaan",
 	from: "support@onebanwaan.com",
 	to: "cecironalejoiii@gmail.com",
-	subject: "Test send email",
+	subject: "Hello World",
 	text: "That was easy!",
 };
 
@@ -51,6 +51,7 @@ export default (app) => {
 		transporter.sendMail(mailOptions, function (error, info) {
 			if (error) {
 				console.log(error);
+				res.status(500).send({ message: "SERVER ERROR" });
 			} else {
 				console.log("Email sent: " + info.response);
 			}

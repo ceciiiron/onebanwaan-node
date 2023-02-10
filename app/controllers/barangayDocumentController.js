@@ -112,7 +112,12 @@ export const findAllRequestsByBarangay = (req, res) => {
 
 	if (search) {
 		const searchCondition = {
-			[Op.or]: [{ full_name: { [Op.like]: `${search}%` } }, { ticket_code: { [Op.like]: `${search}%` } }, { email: { [Op.like]: `${search}%` } }],
+			[Op.or]: [
+				{ full_name: { [Op.like]: `${search}%` } },
+				{ ticket_code: { [Op.like]: `${search}%` } },
+				{ email: { [Op.like]: `${search}%` } },
+				{ or_number: { [Op.like]: `${search}%` } },
+			],
 		};
 		Object.assign(barangayDocumentCondition, searchCondition);
 	}
@@ -211,6 +216,10 @@ export const updatePaymentStatus = async (req, res) => {
 			barangayDocumentRequest.paid_at = req.body.paid_at;
 		}
 
+		if (req.body.or_number) {
+			barangayDocumentRequest.or_number = req.body.or_number;
+		}
+
 		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
 
 		await AuditLog.create({
@@ -257,6 +266,8 @@ export const updateRequestStatus = async (req, res) => {
 				currentRequest.request_status
 			)} to ${requestStatusText(barangayDocumentRequest.request_status)}`,
 		});
+
+		//TODO: SEND EMAIL HERE
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {

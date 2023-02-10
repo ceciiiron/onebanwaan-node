@@ -61,6 +61,7 @@ export default (sequelize, DataTypes) => {
 			payment_status: { type: DataTypes.INTEGER, defaultValue: 1 }, //1 pending,2 unpaid 3 paid 4 FREE 5 void
 			issued_at: { type: DataTypes.DATEONLY },
 			paid_at: { type: DataTypes.DATEONLY },
+			or_number: { type: DataTypes.INTEGER, defaultValue: null },
 			remarks: { type: DataTypes.STRING(500), allowNull: true },
 		},
 		{

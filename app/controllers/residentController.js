@@ -58,8 +58,6 @@ export const create = async (req, res) => {
 
 export const checkEmail = async (req, res) => {
 	const { email } = req.query;
-
-	console.log("HOHO", email);
 	try {
 		if (await ResidentAccount.findOne({ where: { email: email } })) {
 			return res.status(400).send({
