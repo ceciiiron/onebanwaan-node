@@ -51,6 +51,9 @@ export default (sequelize, DataTypes) => {
 			incident_location: { type: DataTypes.STRING(1000), allowNull: false },
 			evidence_link: { type: DataTypes.STRING(500), allowNull: true },
 
+			book_number: { type: DataTypes.INTEGER, defaultValue: 0 },
+			page_number: { type: DataTypes.INTEGER, defaultValue: 0 },
+
 			contact_number: { type: DataTypes.STRING(255) },
 			email: { type: DataTypes.STRING(255) },
 

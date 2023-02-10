@@ -229,14 +229,16 @@ export const updateStatus = async (req, res) => {
 
 		await BarangayBlotter.update(barangayBlotter, { where: { barangay_blotter_id } });
 
-		await AuditLog.create({
-			resident_account_id: req.session.user.resident_account_id,
-			module: "BLOTTER RECORDS",
-			action: "UPDATE",
-			description: `Updated status of B${barangay_blotter_id} from ${reportStatusText(currentRequest.status)} to ${reportStatusText(
-				barangayBlotter.status
-			)}`,
-		});
+		if (req.session?.user?.resident_account_id) {
+			await AuditLog.create({
+				resident_account_id: req.session.user.resident_account_id,
+				module: "BLOTTER RECORDS",
+				action: "UPDATE",
+				description: `Updated status of B${barangay_blotter_id} from ${reportStatusText(currentRequest.status)} to ${reportStatusText(
+					barangayBlotter.status
+				)}`,
+			});
+		}
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {
@@ -255,12 +257,41 @@ export const updateCaseType = async (req, res) => {
 
 		await BarangayBlotter.update(barangayBlotter, { where: { barangay_blotter_id } });
 
-		await AuditLog.create({
-			resident_account_id: req.session.user.resident_account_id,
-			module: "BLOTTER RECORDS",
-			action: "UPDATE",
-			description: `Updated case type of B${barangay_blotter_id}`,
-		});
+		if (req.session?.user?.resident_account_id) {
+			await AuditLog.create({
+				resident_account_id: req.session.user.resident_account_id,
+				module: "BLOTTER RECORDS",
+				action: "UPDATE",
+				description: `Updated case type of B${barangay_blotter_id}`,
+			});
+		}
+
+		res.send({ message: "Data updated successfully!" });
+	} catch (error) {
+		//delete file
+		res.status(500).send({ message: `Could not upload data: ${error}` });
+	}
+};
+
+export const updateBookReference = async (req, res) => {
+	const { barangay_blotter_id } = req.params;
+
+	try {
+		let barangayBlotter = {
+			book_number: req.body.book_number,
+			page_number: req.body.page_number,
+		};
+
+		await BarangayBlotter.update(barangayBlotter, { where: { barangay_blotter_id } });
+
+		if (req.session?.user?.resident_account_id) {
+			await AuditLog.create({
+				resident_account_id: req.session.user.resident_account_id,
+				module: "BLOTTER RECORDS",
+				action: "UPDATE",
+				description: `Updated book reference of B${barangay_blotter_id}`,
+			});
+		}
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {
@@ -279,12 +310,14 @@ export const updateNarrative = async (req, res) => {
 
 		await BarangayBlotter.update(barangayBlotter, { where: { barangay_blotter_id } });
 
-		await AuditLog.create({
-			resident_account_id: req.session.user.resident_account_id,
-			module: "BLOTTER RECORDS",
-			action: "UPDATE",
-			description: `Updated narrative of B${barangay_blotter_id}`,
-		});
+		if (req.session?.user?.resident_account_id) {
+			await AuditLog.create({
+				resident_account_id: req.session.user.resident_account_id,
+				module: "BLOTTER RECORDS",
+				action: "UPDATE",
+				description: `Updated narrative of B${barangay_blotter_id}`,
+			});
+		}
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {
