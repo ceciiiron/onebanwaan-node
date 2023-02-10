@@ -1,12 +1,26 @@
 import db from "../models/index.js";
 import capitalize from "capitalize";
 
+import dayjs from "dayjs";
+
 const Barangay = db.sequelize.models.Barangay;
 const BarangayDocumentRequest = db.sequelize.models.BarangayDocumentRequest;
 const BarangayDocumentSetting = db.sequelize.models.BarangayDocumentSetting;
 const AuditLog = db.sequelize.models.AuditLog;
 const DocumentType = db.sequelize.models.DocumentType;
 const Op = db.Sequelize.Op;
+
+import nodemailer from "nodemailer";
+
+let transporter = nodemailer.createTransport({
+	host: "smtp.hostinger.com",
+	port: 465,
+	secure: true, // true for 465, false for other ports
+	auth: {
+		user: "support@onebanwaan.com", // generated ethereal user
+		pass: "2019-Cs-100456", // generated ethereal password
+	},
+});
 
 const paymentStatusText = (status) => {
 	switch (status) {
@@ -243,7 +257,26 @@ export const updatePaymentStatus = async (req, res) => {
 export const updateRequestStatus = async (req, res) => {
 	const { barangay_document_request_id } = req.params;
 
-	const currentRequest = await BarangayDocumentRequest.findByPk(barangay_document_request_id);
+	const currentRequest = await BarangayDocumentRequest.findByPk(barangay_document_request_id, {
+		include: [
+			{
+				model: BarangayDocumentSetting,
+				as: "barangay_document_settings",
+				include: [
+					{
+						model: DocumentType,
+						as: "barangay_document_settings",
+						// attributes: [],
+						// required: true,
+					},
+				],
+			},
+			{
+				model: Barangay,
+				as: "barangay_document_request",
+			},
+		],
+	});
 
 	try {
 		let barangayDocumentRequest = {
@@ -271,7 +304,41 @@ export const updateRequestStatus = async (req, res) => {
 			});
 		}
 
-		//TODO: SEND EMAIL HERE
+		var mailOptions = {
+			sender: "One Banwaan",
+			from: "support@onebanwaan.com",
+			to: currentRequest.email,
+			subject: "Barangay Document Issuance",
+			text: "",
+		};
+
+		//1pending, 2approved, 3issued, 4disapproved
+
+		//
+		if (barangayDocumentRequest.request_status === 2) {
+			mailOptions.text = `Your document request (${currentRequest.barangay_document_settings.barangay_document_settings.name}) with ticket code ${
+				currentRequest.ticket_code
+			} has been approved by a barangay administrator. \n\nPlease prepare a fee of PHP ${
+				currentRequest.barangay_document_settings.fee
+			} and claim your document at Barangay ${currentRequest.barangay_document_request.number}, ${
+				currentRequest.barangay_document_request.name
+			}, according to your provided expected claim date and time: ${dayjs(currentRequest.claim_date).format("YYYY-MM-DD HH:mm:00")}`;
+		}
+
+		if (barangayDocumentRequest.request_status === 4) {
+			mailOptions.text = `Your document request (${currentRequest.barangay_document_settings.barangay_document_settings.name}) with ticket code ${currentRequest.ticket_code} has been disapproved. REASON: ${req.body.remarks}`;
+		}
+
+		if (barangayDocumentRequest.request_status === 2 || barangayDocumentRequest.request_status == 4) {
+			transporter.sendMail(mailOptions, function (error, info) {
+				if (error) {
+					console.log(error);
+					// res.status(500).send({ message: "SERVER ERROR" });
+				} else {
+					console.log("Email sent: " + info.response);
+				}
+			});
+		}
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {
