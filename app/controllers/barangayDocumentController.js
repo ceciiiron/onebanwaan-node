@@ -222,14 +222,16 @@ export const updatePaymentStatus = async (req, res) => {
 
 		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
 
-		await AuditLog.create({
-			resident_account_id: req.session.user.resident_account_id,
-			module: "DOCUMENT ISSUANCE",
-			action: "UPDATE",
-			description: `Updated payment status of ${currentRequest.full_name} (${currentRequest.ticket_code}) from ${paymentStatusText(
-				currentRequest.payment_status
-			)} to ${paymentStatusText(barangayDocumentRequest.payment_status)}`,
-		});
+		if (req.session?.user?.resident_account_id) {
+			await AuditLog.create({
+				resident_account_id: req.session.user.resident_account_id,
+				module: "DOCUMENT ISSUANCE",
+				action: "UPDATE",
+				description: `Updated payment status of ${currentRequest.full_name} (${currentRequest.ticket_code}) from ${paymentStatusText(
+					currentRequest.payment_status
+				)} to ${paymentStatusText(barangayDocumentRequest.payment_status)}`,
+			});
+		}
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {
@@ -258,14 +260,16 @@ export const updateRequestStatus = async (req, res) => {
 
 		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
 
-		await AuditLog.create({
-			resident_account_id: req.session.user.resident_account_id,
-			module: "DOCUMENT ISSUANCE",
-			action: "UPDATE",
-			description: `Updated request status of ${currentRequest.full_name} (${currentRequest.ticket_code}) from ${requestStatusText(
-				currentRequest.request_status
-			)} to ${requestStatusText(barangayDocumentRequest.request_status)}`,
-		});
+		if (req.session?.user?.resident_account_id) {
+			await AuditLog.create({
+				resident_account_id: req.session.user.resident_account_id,
+				module: "DOCUMENT ISSUANCE",
+				action: "UPDATE",
+				description: `Updated request status of ${currentRequest.full_name} (${currentRequest.ticket_code}) from ${requestStatusText(
+					currentRequest.request_status
+				)} to ${requestStatusText(barangayDocumentRequest.request_status)}`,
+			});
+		}
 
 		//TODO: SEND EMAIL HERE
 
@@ -294,12 +298,14 @@ export const updatePersonalInformation = async (req, res) => {
 
 		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
 
-		await AuditLog.create({
-			resident_account_id: req.session.user.resident_account_id,
-			module: "DOCUMENT ISSUANCE",
-			action: "UPDATE",
-			description: `Updated personal information of ${currentRequest.full_name} (${currentRequest.ticket_code})`,
-		});
+		if (req.session?.user?.resident_account_id) {
+			await AuditLog.create({
+				resident_account_id: req.session.user.resident_account_id,
+				module: "DOCUMENT ISSUANCE",
+				action: "UPDATE",
+				description: `Updated personal information of ${currentRequest.full_name} (${currentRequest.ticket_code})`,
+			});
+		}
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {
@@ -321,12 +327,14 @@ export const updateDocumentInformation = async (req, res) => {
 
 		await BarangayDocumentRequest.update(barangayDocumentRequest, { where: { barangay_document_request_id } });
 
-		await AuditLog.create({
-			resident_account_id: req.session.user.resident_account_id,
-			module: "DOCUMENT ISSUANCE",
-			action: "UPDATE",
-			description: `Updated document information of ${currentRequest.full_name} (${currentRequest.ticket_code})`,
-		});
+		if (req.session?.user?.resident_account_id) {
+			await AuditLog.create({
+				resident_account_id: req.session.user.resident_account_id,
+				module: "DOCUMENT ISSUANCE",
+				action: "UPDATE",
+				description: `Updated document information of ${currentRequest.full_name} (${currentRequest.ticket_code})`,
+			});
+		}
 
 		res.send({ message: "Data updated successfully!" });
 	} catch (error) {
