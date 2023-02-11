@@ -9,6 +9,7 @@ import {
 	changePassword,
 	currentChangePassword,
 	currentUpdate,
+	mainStatistics,
 } from "../controllers/adminController.js";
 // const router = require("express").Router();
 
@@ -31,6 +32,7 @@ export default (app) => {
 	router.get("/", isAdmin, findAll);
 	router.put("/current/changepassword", [isAdmin], currentChangePassword);
 	router.put("/current/updateaccount", isAdmin, upload.single("image_file"), currentUpdate);
+	router.get("/statistics", mainStatistics);
 
 	router.put("/:admin_id/changepassword", [isAdmin], changePassword);
 	router.get("/:id", isAdmin, findOne);

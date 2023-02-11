@@ -334,3 +334,135 @@ export async function currentUpdate(req, res) {
 		res.status(500).send({ message: "Error updating data", error: error, stack: error.stack });
 	}
 }
+
+//STATISTICS
+
+export const mainStatistics = async (req, res) => {
+	const { barangay_id } = req.params;
+
+	try {
+		const total_posts = await db.sequelize.query(`SELECT COUNT(Posts.post_id) as total_posts FROM Posts;`, {
+			// bind: {
+			// 	barangay_id: barangay_id,
+			// },
+			type: db.Sequelize.QueryTypes.SELECT,
+			plain: true,
+		});
+
+		const total_barangays = await db.sequelize.query(`SELECT COUNT(Barangays.barangay_id) as total_barangays FROM Barangays;`, {
+			// bind: {
+			// 	barangay_id: barangay_id,
+			// },
+			type: db.Sequelize.QueryTypes.SELECT,
+			plain: true,
+		});
+
+		const total_hearts = await db.sequelize.query(`SELECT COUNT(PostHearts.post_heart_id) as total_hearts FROM PostHearts;`, {
+			// bind: {
+			// 	barangay_id: barangay_id,
+			// },
+			type: db.Sequelize.QueryTypes.SELECT,
+			plain: true,
+		});
+
+		const total_accounts = await db.sequelize.query(`SELECT COUNT(ResidentAccounts.resident_account_id) as total_accounts FROM ResidentAccounts;`, {
+			type: db.Sequelize.QueryTypes.SELECT,
+			plain: true,
+		});
+
+		const total_document_request = await db.sequelize.query(
+			`SELECT COUNT(BarangayDocumentRequests.barangay_document_request_id) as total_document_request FROM BarangayDocumentRequests`,
+			{
+				type: db.Sequelize.QueryTypes.SELECT,
+				plain: true,
+			}
+		);
+
+		const total_issued_documents = await db.sequelize.query(
+			`SELECT COUNT(BarangayDocumentRequests.barangay_document_request_id) as total_issued_documents FROM BarangayDocumentRequests WHERE BarangayDocumentRequests.request_status = 3;`,
+			{
+				type: db.Sequelize.QueryTypes.SELECT,
+				plain: true,
+			}
+		);
+
+		const total_hotlines = await db.sequelize.query(`SELECT COUNT(BarangayHotlines.barangay_hotline_id) as total_hotlines FROM BarangayHotlines;`, {
+			type: db.Sequelize.QueryTypes.SELECT,
+			plain: true,
+		});
+
+		const total_incident_reports = await db.sequelize.query(
+			`SELECT COUNT(BarangayBlotters.barangay_blotter_id) as total_incident_reports FROM BarangayBlotters;`,
+			{
+				type: db.Sequelize.QueryTypes.SELECT,
+				plain: true,
+			}
+		);
+
+		const online_ratings_overview = await db.sequelize.query(
+			`SELECT Barangays.number, Barangays.name, BF.barangay_id, COUNT(BF.barangay_id) as total_reviews, CAST(AVG(BF.rating) AS DECIMAL(10,2)) as average_rating FROM BarangayFeedbacks BF
+			JOIN Barangays ON Barangays.barangay_id = BF.barangay_id
+			GROUP BY BF.barangay_id
+			ORDER BY average_rating DESC;
+			`,
+			{
+				type: db.Sequelize.QueryTypes.SELECT,
+			}
+		);
+
+		const recent_posts = await db.sequelize.query(
+			`SELECT B.number, B.name, B.directory, B.logo, 
+				P.post_id, P.post_type_id, P.title, 
+				IF(CHAR_LENGTH(P.content) > 40, CONCAT(LEFT(P.content, 37),"..."), P.content) as content, 
+				P.created_at,P.updated_at 
+			FROM Posts P 
+			JOIN PostTypes PT ON PT.post_type_id = P.post_type_id
+			JOIN ResidentAccounts RA ON RA.resident_account_id = P.resident_account_id
+			JOIN BarangayRoles BR ON BR.barangay_role_id = RA.barangay_role_id
+			JOIN Barangays B ON B.barangay_id = BR.barangay_id
+			
+			WHERE P.as_barangay_admin = 1 AND P.barangay_id IS NULL
+			ORDER BY P.created_at DESC LIMIT 5;`,
+			{
+				type: db.Sequelize.QueryTypes.SELECT,
+			}
+		);
+
+		// const total_pending_barangay_blotter = await db.sequelize.query(
+		// 	`SELECT COUNT(BB.barangay_blotter_id) as total_pending_barangay_blotter FROM BarangayBlotters BB WHERE BB.barangay_id = $barangay_id AND BB.status = 1;`,
+		// 	{
+		// 		bind: {
+		// 			barangay_id: barangay_id,
+		// 		},
+		// 		type: db.Sequelize.QueryTypes.SELECT,
+		// 		plain: true,
+		// 	}
+		// );
+
+		// const total_verified_barangay_blotter = await db.sequelize.query(
+		// 	`SELECT COUNT(BB.barangay_blotter_id) as total_verified_barangay_blotter FROM BarangayBlotters BB WHERE BB.barangay_id = $barangay_id AND BB.status = 2;`,
+		// 	{
+		// 		bind: {
+		// 			barangay_id: barangay_id,
+		// 		},
+		// 		type: db.Sequelize.QueryTypes.SELECT,
+		// 		plain: true,
+		// 	}
+		// );
+
+		res.status(200).send({
+			total_barangays,
+			total_posts,
+			total_hearts,
+			total_accounts,
+			total_hotlines,
+			total_document_request,
+			total_issued_documents,
+			total_incident_reports,
+			online_ratings_overview,
+			recent_posts,
+		});
+	} catch (error) {
+		res.status(500).send({ message: `Could not fetch data: ${error}`, stack: error.stack });
+	}
+};
