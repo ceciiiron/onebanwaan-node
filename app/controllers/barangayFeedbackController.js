@@ -253,3 +253,41 @@ export const findAllFeedbackByBarangay = (req, res) => {
 			res.status(500).send({ message: err.message, stack: err.stack });
 		});
 };
+
+export const barangayStatistics = async (req, res) => {
+	const { barangay_id } = req.params;
+
+	try {
+		const total_rating = await db.sequelize.query(
+			`SELECT CAST(AVG(BF.rating) AS DECIMAL(10,2)) as total_rating FROM BarangayFeedbacks BF WHERE BF.barangay_id = $barangay_id;`,
+			{
+				bind: {
+					barangay_id: barangay_id,
+				},
+				type: db.Sequelize.QueryTypes.SELECT,
+				plain: true,
+			}
+		);
+
+		const online_ratings_overview = await db.sequelize.query(
+			`SELECT RR.rating, IF(S.number_of_rating IS NULL, 0, S.number_of_rating) as rating_count FROM RatingReference RR 
+			LEFT JOIN (SELECT BF.rating, Count(BF.rating) as number_of_rating FROM BarangayFeedbacks BF 
+			WHERE BF.barangay_id = $barangay_id GROUP BY BF.rating) S ON S.rating = RR.rating
+			ORDER BY RR.rating DESC;
+			`,
+			{
+				bind: {
+					barangay_id: barangay_id,
+				},
+				type: db.Sequelize.QueryTypes.SELECT,
+			}
+		);
+
+		res.status(200).send({
+			total_rating,
+			online_ratings_overview,
+		});
+	} catch (error) {
+		res.status(500).send({ message: `Could not fetch data: ${error}`, stack: error.stack });
+	}
+};

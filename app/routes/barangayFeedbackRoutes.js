@@ -1,4 +1,4 @@
-import { create, findAll, findOne, findAllFeedbackByBarangay } from "../controllers/barangayFeedbackController.js";
+import { create, findAll, findOne, findAllFeedbackByBarangay, barangayStatistics } from "../controllers/barangayFeedbackController.js";
 import express from "express";
 const router = express.Router();
 
@@ -9,6 +9,7 @@ export default (app) => {
 	router.post("/:barangay_id/feedback", create);
 
 	router.get("/:barangay_id/feedbacks/", findAllFeedbackByBarangay);
+	router.get("/:barangay_id/feedbacks/statistics", barangayStatistics);
 
 	app.use("/api/barangays", router);
 };
