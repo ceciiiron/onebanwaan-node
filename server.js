@@ -14,8 +14,10 @@ const __filename = fileURLToPath(import.meta.url);
 global.__base_dir = path.dirname(__filename);
 
 /* ========================================================================== */
-/*                                  DATABASE    changes 2                              */
-/*                                  DATABASE    changes 3                              */
+/*                                  DATABASE              changes 1                    */
+/*                                  DATABASE              changes 2                    */
+/*                                  DATABASE              changes 3                    */
+/*                                  DATABASE              changes 4                    */
 /* ========================================================================== */
 import db from "./app/models/index.js";
 db.sequelize
