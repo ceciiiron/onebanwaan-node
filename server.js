@@ -18,7 +18,7 @@ global.__base_dir = path.dirname(__filename);
 /*                                  DATABASE              changes 2                    */
 /*                                  DATABASE              changes 3                    */
 /*                                  DATABASE              changes 4                    */
-/*                                  DATABASE              changes 6                    */
+/*                                  DATABASE              third                    */
 import db from "./app/models/index.js";
 db.sequelize
 	.sync()
